@@ -1,0 +1,213 @@
+const prisma = require('../config/prisma');
+
+// Listar todos los clientes
+const listarClientes = async (req, res) => {
+    try {
+        const { status, query, distrito } = req.query;
+
+        const where = {};
+
+        // Filtrar por status
+        if (status && status !== 'todos') {
+            where.status = status;
+        }
+
+        // Filtrar por query (nombre, email, distrito)
+        if (query) {
+            where.OR = [
+                { nombre: { contains: query } },
+                { email: { contains: query } },
+                { distrito: { contains: query } }
+            ];
+        }
+
+        // Filtrar por distrito específico si se requiere
+        if (distrito) {
+            where.distrito = distrito;
+        }
+
+        const clientes = await prisma.cliente.findMany({
+            where,
+            orderBy: {
+                createdAt: 'desc'
+            },
+            select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+                distrito: true,
+                mascotas: true,
+                status: true,
+                ultimaCompra: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+
+        res.json({
+            success: true,
+            data: { clientes },
+            total: clientes.length
+        });
+    } catch (error) {
+        console.error('Error al listar clientes:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener clientes',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Crear cliente
+const crearCliente = async (req, res) => {
+    try {
+        const { nombre, email, telefono, distrito, status, mascotas, ultimaCompra } = req.body;
+
+        // Validar email único
+        const clienteExistente = await prisma.cliente.findUnique({
+            where: { email }
+        });
+
+        if (clienteExistente) {
+            return res.status(400).json({
+                success: false,
+                message: 'El email ya está registrado'
+            });
+        }
+
+        const nuevoCliente = await prisma.cliente.create({
+            data: {
+                nombre,
+                email,
+                telefono,
+                distrito,
+                status: status || 'activo',
+                mascotas: mascotas || 0,
+                ultimaCompra: ultimaCompra ? new Date(ultimaCompra) : null
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            data: { cliente: nuevoCliente },
+            message: 'Cliente creado exitosamente'
+        });
+    } catch (error) {
+        console.error('Error al crear cliente:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al crear cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Obtener cliente por ID
+const obtenerCliente = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const cliente = await prisma.cliente.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!cliente) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cliente no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: { cliente }
+        });
+    } catch (error) {
+        console.error('Error al obtener cliente:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Actualizar cliente
+const actualizarCliente = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, email, telefono, distrito, status, mascotas, ultimaCompra } = req.body;
+
+        // Verificar si el email pertenece a otro cliente
+        if (email) {
+            const clienteExistente = await prisma.cliente.findUnique({
+                where: { email }
+            });
+            if (clienteExistente && clienteExistente.id !== parseInt(id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El email ya está en uso por otro cliente'
+                });
+            }
+        }
+
+        const clienteActualizado = await prisma.cliente.update({
+            where: { id: parseInt(id) },
+            data: {
+                nombre,
+                email,
+                telefono,
+                distrito,
+                status,
+                mascotas,
+                ...(ultimaCompra !== undefined && { ultimaCompra: ultimaCompra ? new Date(ultimaCompra) : null })
+            }
+        });
+
+        res.json({
+            success: true,
+            data: { cliente: clienteActualizado },
+            message: 'Cliente actualizado exitosamente'
+        });
+    } catch (error) {
+        console.error('Error al actualizar cliente:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Eliminar cliente (opcional, si se requiere)
+const eliminarCliente = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.cliente.delete({
+            where: { id: parseInt(id) }
+        });
+
+        res.json({
+            success: true,
+            message: 'Cliente eliminado exitosamente'
+        });
+    } catch (error) {
+        console.error('Error al eliminar cliente:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+module.exports = {
+    listarClientes,
+    crearCliente,
+    obtenerCliente,
+    actualizarCliente,
+    eliminarCliente
+};

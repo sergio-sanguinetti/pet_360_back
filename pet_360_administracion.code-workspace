@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../pet_360_administracion"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../pet_360_front"
+		}
+	],
+	"settings": {
+		"typescript.tsdk": "node_modules/typescript/lib"
+	}
+}

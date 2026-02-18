@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  nombre    String?
+  rol       String   @default("vendedor")
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  email        String   @unique
+  telefono     String?
+  distrito     String?
+  mascotas     Int      @default(0)
+  status       String   @default("activo") // activo, pausado, sin_suscripcion
+  ultimaCompra DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  mascotasDetalle Mascota[]
+
+  @@map("clientes")
+}
+
+model Mascota {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  especie        String   // Perro, Gato
+  raza           String?
+  edad           String?
+  pesoKg         Float?
+  clienteId      Int
+  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  vacunasAlDia   Boolean  @default(false)
+  ultimaRevision String?  @default("—")
+  proximaDosis   String?  @default("—")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  razaId         Int?
+  razaRel        Raza?    @relation(fields: [razaId], references: [id])
+
+  @@map("mascotas")
+}
+
+model Raza {
+  id           Int      @id @default(autoincrement())
+  nombre       String   @unique
+  promedioVida Float?
+  promedioPeso Float?
+  mascotas     Mascota[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("razas")
+}
+
+model Configuracion {
+  id                Int      @id @default(autoincrement())
+
+  // Info General
+  razonSocial       String?
+  nombreComercial   String?
+  ruc               String?
+  direccionFiscal   String?
+  departamento      String?
+  telefono          String?
+  email             String?
+
+  // Boleta
+  serieBoleta       String?
+  numeroSiguiente   Int      @default(1)
+  encabezadoBoleta  String?
+  direccionBoleta   String?
+  leyendaSunat      String?
+  piePagina         String?
+
+  updatedAt         DateTime @updatedAt
+
+  @@map("configuracion")
+}
+
+model Producto {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  descripcion    String?
+  imagenUrl      String?
+  precioUnitario Float    @default(0)
+  cantidad       Float    @default(0) // Float because unit can be kg/g/l/ml
+  unidad         String   @default("unidad") // kg, g, l, ml, unidad
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("productos")
+}
+
+
