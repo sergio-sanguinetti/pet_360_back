@@ -42,6 +42,13 @@ const listarMascotas = async (req, res) => {
                         nombre: true,
                         email: true
                     }
+                },
+                historialPesos: {
+                    orderBy: { fecha: 'asc' }
+                },
+                suscripciones: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
                 }
             }
         });
@@ -139,6 +146,18 @@ const obtenerMascota = async (req, res) => {
                         nombre: true,
                         email: true
                     }
+                },
+                historialPesos: {
+                    orderBy: {
+                        fecha: 'desc'
+                    }
+                },
+                suscripciones: {
+                    where: { estado: 'activa' },
+                    orderBy: {
+                        createdAt: 'desc'
+                    },
+                    take: 1
                 }
             }
         });
@@ -254,10 +273,72 @@ const eliminarMascota = async (req, res) => {
     }
 };
 
+// Historial de peso
+const registrarPeso = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { pesoKg, nota } = req.body;
+
+        const mascotaId = parseInt(id);
+
+        const nuevoPeso = await prisma.historialPeso.create({
+            data: {
+                mascotaId,
+                pesoKg: parseFloat(pesoKg),
+                nota
+            }
+        });
+
+        // Actualizar el peso actual en la mascota
+        await prisma.mascota.update({
+            where: { id: mascotaId },
+            data: { pesoKg: parseFloat(pesoKg) }
+        });
+
+        res.status(201).json({
+            success: true,
+            data: { peso: nuevoPeso },
+            message: 'Peso registrado exitosamente'
+        });
+    } catch (error) {
+        console.error('Error al registrar peso:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al registrar peso',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+const obtenerHistorialPeso = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const historial = await prisma.historialPeso.findMany({
+            where: { mascotaId: parseInt(id) },
+            orderBy: { fecha: 'asc' }
+        });
+
+        res.json({
+            success: true,
+            data: { historial }
+        });
+    } catch (error) {
+        console.error('Error al obtener historial de peso:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener historial de peso',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 module.exports = {
     listarMascotas,
     crearMascota,
     obtenerMascota,
     actualizarMascota,
-    eliminarMascota
+    eliminarMascota,
+    registrarPeso,
+    obtenerHistorialPeso
 };

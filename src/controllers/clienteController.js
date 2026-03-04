@@ -204,10 +204,153 @@ const eliminarCliente = async (req, res) => {
     }
 };
 
+// Completar Wizard
+const completarWizard = async (req, res) => {
+    try {
+        const { clienteId, mascotaData, suscripcionData } = req.body;
+
+        if (!clienteId || !mascotaData || !suscripcionData) {
+            return res.status(400).json({ success: false, message: 'Faltan datos requeridos (clienteId, mascotaData o suscripcionData)' });
+        }
+
+        // Usar una transacción atómica para asegurar que todas las operaciones se realicen o ninguna
+        const resultadoTransaccion = await prisma.$transaction(async (tx) => {
+            // 1. Crear Mascota
+            const nuevaMascota = await tx.mascota.create({
+                data: {
+                    nombre: mascotaData.nombre,
+                    especie: mascotaData.especie || 'Perro', // default if missing
+                    raza: mascotaData.raza,
+                    edad: mascotaData.edad,
+                    pesoKg: mascotaData.pesoKg ? parseFloat(mascotaData.pesoKg) : null,
+                    condicion: mascotaData.condicion,
+                    actividad: mascotaData.actividad,
+                    sexo: mascotaData.sexo,
+                    castrado: mascotaData.castrado,
+                    clienteId: parseInt(clienteId)
+                }
+            });
+
+            // 2. Crear Suscripción
+            const proxima = new Date();
+            proxima.setDate(proxima.getDate() + 3);
+
+            const nuevaSuscripcion = await tx.suscripcion.create({
+                data: {
+                    clienteId: parseInt(clienteId),
+                    mascotaId: nuevaMascota.id,
+                    plan: suscripcionData.plan || 'mensual',
+                    proximaEntrega: proxima,
+                    estado: 'activa',
+                    montoBase: parseFloat(suscripcionData.montoBase || 0)
+                }
+            });
+
+            // 3. Actualizar Cliente marcando wizardCompletado y aumentando el contador
+            await tx.cliente.update({
+                where: { id: parseInt(clienteId) },
+                data: {
+                    wizardCompletado: true,
+                    mascotas: {
+                        increment: 1
+                    }
+                }
+            });
+
+            return { mascota: nuevaMascota, suscripcion: nuevaSuscripcion };
+        });
+
+        res.json({
+            success: true,
+            message: 'Wizard completado exitosamente',
+            data: resultadoTransaccion
+        });
+    } catch (error) {
+        console.error('Error al completar wizard:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al completar wizard',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Agregar Mascota (para clientes que ya completaron el wizard)
+const agregarMascota = async (req, res) => {
+    try {
+        const { clienteId, mascotaData, suscripcionData } = req.body;
+
+        if (!clienteId || !mascotaData) {
+            return res.status(400).json({ success: false, message: 'Faltan datos requeridos (clienteId o mascotaData)' });
+        }
+
+        const resultadoTransaccion = await prisma.$transaction(async (tx) => {
+            // 1. Crear Mascota
+            const nuevaMascota = await tx.mascota.create({
+                data: {
+                    nombre: mascotaData.nombre,
+                    especie: mascotaData.especie || 'Perro',
+                    raza: mascotaData.raza,
+                    edad: mascotaData.edad,
+                    pesoKg: mascotaData.pesoKg ? parseFloat(mascotaData.pesoKg) : null,
+                    condicion: mascotaData.condicion,
+                    actividad: mascotaData.actividad,
+                    sexo: mascotaData.sexo,
+                    castrado: mascotaData.castrado,
+                    clienteId: parseInt(clienteId)
+                }
+            });
+
+            let nuevaSuscripcion = null;
+            // 2. Crear Suscripción si se proporcionan datos
+            if (suscripcionData) {
+                const proxima = new Date();
+                proxima.setDate(proxima.getDate() + 3);
+
+                nuevaSuscripcion = await tx.suscripcion.create({
+                    data: {
+                        clienteId: parseInt(clienteId),
+                        mascotaId: nuevaMascota.id,
+                        plan: suscripcionData.plan || 'mensual',
+                        proximaEntrega: proxima,
+                        estado: 'activa',
+                        montoBase: parseFloat(suscripcionData.montoBase || 0)
+                    }
+                });
+            }
+
+            // 3. Incrementar el contador de mascotas del cliente
+            await tx.cliente.update({
+                where: { id: parseInt(clienteId) },
+                data: {
+                    mascotas: { increment: 1 }
+                }
+            });
+
+            return { mascota: nuevaMascota, suscripcion: nuevaSuscripcion };
+        });
+
+        res.json({
+            success: true,
+            message: 'Mascota agregada exitosamente',
+            data: resultadoTransaccion
+        });
+    } catch (error) {
+        console.error('Error al agregar mascota:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al agregar mascota',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 module.exports = {
     listarClientes,
     crearCliente,
     obtenerCliente,
     actualizarCliente,
-    eliminarCliente
+    eliminarCliente,
+    completarWizard,
+    agregarMascota
 };

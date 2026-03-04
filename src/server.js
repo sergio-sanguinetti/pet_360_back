@@ -16,6 +16,12 @@ const mascotaRoutes = require('./routes/mascotaRoutes');
 const configuracionRoutes = require('./routes/configuracionRoutes');
 const productoRoutes = require('./routes/productoRoutes');
 const razaRoutes = require('./routes/razaRoutes');
+const recetasRoutes = require('./routes/recetasRoutes');
+const antipulgasRoutes = require('./routes/antipulgasRoutes');
+const notificacionRoutes = require('./routes/notificacionRoutes');
+const alergiaRoutes = require('./routes/alergiaRoutes');
+const vacunasRoutes = require('./routes/vacunasRoutes');
+const suscripcionRoutes = require('./routes/suscripcionRoutes');
 
 // ...
 
@@ -98,6 +104,12 @@ app.use('/api/mascotas', mascotaRoutes);
 app.use('/api/configuracion', configuracionRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/razas', razaRoutes);
+app.use('/api/recetas', recetasRoutes);
+app.use('/api/antipulgas', antipulgasRoutes);
+app.use('/api/notificaciones', notificacionRoutes);
+app.use('/api/alergias', alergiaRoutes);
+app.use('/api/vacunas', vacunasRoutes);
+app.use('/api/suscripciones', suscripcionRoutes);
 
 // Ruta de salud del servidor
 app.get('/api/health', (req, res) => {

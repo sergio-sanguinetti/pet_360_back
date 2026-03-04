@@ -27,14 +27,17 @@ model Cliente {
   id           Int      @id @default(autoincrement())
   nombre       String
   email        String   @unique
+  password     String?
   telefono     String?
   distrito     String?
   mascotas     Int      @default(0)
+  wizardCompletado Boolean @default(false)
   status       String   @default("activo") // activo, pausado, sin_suscripcion
   ultimaCompra DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   mascotasDetalle Mascota[]
+  suscripciones   Suscripcion[]
 
   @@map("clientes")
 }
@@ -44,8 +47,15 @@ model Mascota {
   nombre         String
   especie        String   // Perro, Gato
   raza           String?
+  sexo           String?
+  castrado       Boolean  @default(false)
+  actividad      String?  @default("activo")
   edad           String?
   pesoKg         Float?
+  condicion      String?
+  alergiasMascota String? @db.Text
+  vacunasMascota  String? @db.Text
+  tratamientosMascota String? @db.Text
   clienteId      Int
   cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   vacunasAlDia   Boolean  @default(false)
@@ -56,6 +66,8 @@ model Mascota {
 
   razaId         Int?
   razaRel        Raza?    @relation(fields: [razaId], references: [id])
+  suscripciones  Suscripcion[]
+  historialPesos HistorialPeso[]
 
   @@map("mascotas")
 }
@@ -112,4 +124,114 @@ model Producto {
   @@map("productos")
 }
 
+model Receta {
+  id             Int       @id @default(autoincrement())
+  nombre         String
+  precio         Float     @default(0) // Costo o precio por receta
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  ingredientes   RecetaIngrediente[]
+  precios        RecetaPrecio[]
 
+  @@map("recetas")
+}
+
+model RecetaIngrediente {
+  id           Int      @id @default(autoincrement())
+  recetaId     Int
+  categoria    String   // "Proteina 60%", "Carbohidrato 25%", etc.
+  insumo       String   // "Pollo", etc.
+  cantidad     String   // "400 gr", etc.
+  
+  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+
+  @@map("receta_ingredientes")
+}
+
+model RecetaPrecio {
+  id           Int      @id @default(autoincrement())
+  recetaId     Int
+  sku          String
+  precioBolsa  Float
+  precioPlan   Float
+  
+  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("receta_precios")
+}
+
+model Antipulga {
+  id           Int      @id @default(autoincrement())
+  tipo         String   
+  nombre       String   
+  frecuencia   String   
+  marcas       String   @db.Text
+  notificacion String   @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("antipulgas")
+}
+
+model Notificacion {
+  id          Int      @id @default(autoincrement())
+  nombre      String   
+  mensaje     String   @db.Text
+  vencimiento DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notificaciones")
+}
+
+model Alergia {
+  id          Int      @id @default(autoincrement())
+  alergia     String   
+  descripcion String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("alergias")
+}
+
+model Vacuna {
+  id          Int      @id @default(autoincrement())
+  nombre      String   
+  enfermedad  String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("vacunas")
+}
+
+model Suscripcion {
+  id               Int      @id @default(autoincrement())
+  clienteId        Int
+  cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  mascotaId        Int?
+  mascota          Mascota? @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
+  plan             String   // "semanal", "quincenal", "mensual"
+  proximaEntrega   DateTime
+  estado           String   @default("activa") // "activa", "pausada", "cancelada"
+  montoBase        Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("suscripciones")
+}
+
+model HistorialPeso {
+  id          Int      @id @default(autoincrement())
+  mascotaId   Int
+  pesoKg      Float
+  nota        String?
+  fecha       DateTime @default(now())
+
+  mascota     Mascota  @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
+
+  @@map("historial_peso")
+}

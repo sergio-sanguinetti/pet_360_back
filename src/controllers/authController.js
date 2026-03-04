@@ -202,9 +202,98 @@ const perfil = async (req, res) => {
   }
 };
 
+// --- CLIENTES ---
+
+// Registro de cliente
+const registrarCliente = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Errores de validación', errors: errors.array() });
+    }
+
+    const { email, password, nombre } = req.body;
+
+    const clienteExistente = await prisma.cliente.findUnique({ where: { email } });
+    if (clienteExistente) {
+      return res.status(400).json({ success: false, message: 'El email ya está registrado como cliente' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const nuevoCliente = await prisma.cliente.create({
+      data: {
+        email,
+        password: passwordHash,
+        nombre: nombre || 'Nuevo Cliente',
+        status: 'activo'
+      },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        status: true,
+        wizardCompletado: true,
+        createdAt: true
+      }
+    });
+
+    const token = jwt.sign(
+      { id: nuevoCliente.id, email: nuevoCliente.email, rol: 'cliente' },
+      process.env.JWT_SECRET || 'secret_key_default',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({ success: true, message: 'Cliente registrado exitosamente', data: { cliente: nuevoCliente, token } });
+  } catch (error) {
+    console.error('Error en registro cliente:', error);
+    res.status(500).json({ success: false, message: 'Error al registrar cliente', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+};
+
+// Login de cliente
+const loginCliente = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Errores de validación', errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+
+    const cliente = await prisma.cliente.findUnique({ where: { email } });
+    if (!cliente || !cliente.password) {
+      return res.status(401).json({ success: false, message: 'Credenciales inválidas o cuenta sin contraseña' });
+    }
+
+    if (cliente.status !== 'activo') {
+      return res.status(401).json({ success: false, message: 'Cuenta inactiva. Contacta soporte.' });
+    }
+
+    const passwordValida = await bcrypt.compare(password, cliente.password);
+    if (!passwordValida) {
+      return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+    }
+
+    const token = jwt.sign(
+      { id: cliente.id, email: cliente.email, rol: 'cliente' },
+      process.env.JWT_SECRET || 'secret_key_default',
+      { expiresIn: '24h' }
+    );
+
+    res.json({ success: true, message: 'Login cliente exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: cliente.wizardCompletado }, token } });
+  } catch (error) {
+    console.error('Error en login cliente:', error);
+    res.status(500).json({ success: false, message: 'Error al iniciar sesión', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+};
+
 module.exports = {
   registrar,
   login,
-  perfil
+  perfil,
+  registrarCliente,
+  loginCliente
 };
 
