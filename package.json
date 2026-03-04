@@ -13,7 +13,8 @@
         "prisma:migrate": "prisma migrate dev",
         "prisma:studio": "prisma studio",
         "prisma:push": "prisma db push",
-        "create:test-user": "node src/scripts/createTestUser.js"
+        "create:test-user": "node src/scripts/createTestUser.js",
+        "postinstall": "prisma generate"
     },
     "keywords": [
         "konfio",
