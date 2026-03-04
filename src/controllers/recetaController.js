@@ -4,7 +4,7 @@ const prisma = require('../config/prisma');
 exports.getRecetas = async (req, res) => {
     try {
         const recetas = await prisma.receta.findMany({
-            include: { ingredientes: true, precios: true }
+            include: { ingredientes: true, precios: true, etiquetas: true, beneficios: true }
         });
         res.json(recetas);
     } catch (error) {
@@ -15,11 +15,19 @@ exports.getRecetas = async (req, res) => {
 // Crear una receta
 exports.createReceta = async (req, res) => {
     try {
-        const { nombre, precio, ingredientes, precios } = req.body;
+        const {
+            nombre, precio, ingredientes, precios, etiquetas, beneficios,
+            imagen, descripcionCorta, descripcionLarga, indicacionMedica, formula
+        } = req.body;
         const nuevaReceta = await prisma.receta.create({
             data: {
                 nombre,
                 precio,
+                imagen,
+                descripcionCorta,
+                descripcionLarga,
+                indicacionMedica,
+                formula,
                 ingredientes: {
                     create: ingredientes
                 },
@@ -27,9 +35,19 @@ exports.createReceta = async (req, res) => {
                     precios: {
                         create: precios
                     }
+                }),
+                ...(etiquetas && {
+                    etiquetas: {
+                        create: etiquetas
+                    }
+                }),
+                ...(beneficios && {
+                    beneficios: {
+                        create: beneficios
+                    }
                 })
             },
-            include: { ingredientes: true, precios: true }
+            include: { ingredientes: true, precios: true, etiquetas: true, beneficios: true }
         });
         res.status(201).json(nuevaReceta);
     } catch (error) {
@@ -41,13 +59,21 @@ exports.createReceta = async (req, res) => {
 exports.updateReceta = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, precio, ingredientes, precios } = req.body;
+        const {
+            nombre, precio, ingredientes, precios, etiquetas, beneficios,
+            imagen, descripcionCorta, descripcionLarga, indicacionMedica, formula
+        } = req.body;
 
         const updated = await prisma.receta.update({
             where: { id: parseInt(id) },
             data: {
                 nombre,
                 precio,
+                imagen,
+                descripcionCorta,
+                descripcionLarga,
+                indicacionMedica,
+                formula,
                 ...(ingredientes && {
                     ingredientes: {
                         deleteMany: {},
@@ -59,9 +85,21 @@ exports.updateReceta = async (req, res) => {
                         deleteMany: {},
                         create: precios
                     }
+                }),
+                ...(etiquetas && {
+                    etiquetas: {
+                        deleteMany: {},
+                        create: etiquetas
+                    }
+                }),
+                ...(beneficios && {
+                    beneficios: {
+                        deleteMany: {},
+                        create: beneficios
+                    }
                 })
             },
-            include: { ingredientes: true, precios: true }
+            include: { ingredientes: true, precios: true, etiquetas: true, beneficios: true }
         });
 
         res.json(updated);

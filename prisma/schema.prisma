@@ -53,6 +53,7 @@ model Mascota {
   edad           String?
   pesoKg         Float?
   condicion      String?
+  objetivo       String?  @default("Normal")
   alergiasMascota String? @db.Text
   vacunasMascota  String? @db.Text
   tratamientosMascota String? @db.Text
@@ -74,10 +75,12 @@ model Mascota {
 
 model Raza {
   id           Int      @id @default(autoincrement())
-  nombre       String   @unique
-  promedioVida Float?
-  promedioPeso Float?
-  mascotas     Mascota[]
+  nombre        String   @unique
+  promedioVida  Float?
+  promedioPeso  Float?
+  categoria     String?
+  umbralMadurez Float?
+  mascotas      Mascota[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -125,14 +128,23 @@ model Producto {
 }
 
 model Receta {
-  id             Int       @id @default(autoincrement())
-  nombre         String
-  precio         Float     @default(0) // Costo o precio por receta
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               Int       @id @default(autoincrement())
+  nombre           String
+  precio           Float     @default(0) // Costo o precio por receta
+  
+  imagen           String?   @db.Text
+  descripcionCorta String?   @db.Text
+  descripcionLarga String?   @db.Text
+  indicacionMedica String?   @db.Text
+  formula          String?   @db.Text
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   
   ingredientes   RecetaIngrediente[]
   precios        RecetaPrecio[]
+  etiquetas      RecetaEtiqueta[]
+  beneficios     RecetaBeneficio[]
 
   @@map("recetas")
 }
@@ -162,6 +174,29 @@ model RecetaPrecio {
   updatedAt    DateTime @updatedAt
 
   @@map("receta_precios")
+}
+
+model RecetaEtiqueta {
+  id           Int      @id @default(autoincrement())
+  recetaId     Int
+  nombre       String
+  icono        String
+  
+  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+
+  @@map("receta_etiquetas")
+}
+
+model RecetaBeneficio {
+  id           Int      @id @default(autoincrement())
+  recetaId     Int
+  titulo       String
+  descripcion  String   @db.Text
+  icono        String
+  
+  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+
+  @@map("receta_beneficios")
 }
 
 model Antipulga {
@@ -234,4 +269,26 @@ model HistorialPeso {
   mascota     Mascota  @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
 
   @@map("historial_peso")
+}
+
+model Descuento {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  fechaInicio DateTime
+  fechaFin    DateTime
+  porcentaje  Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("descuentos")
+}
+
+model DatoCurioso {
+  id          Int      @id @default(autoincrement())
+  datoCurioso String   @db.Text
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("datos_curiosos")
 }

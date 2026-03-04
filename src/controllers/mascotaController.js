@@ -71,7 +71,7 @@ const listarMascotas = async (req, res) => {
 // Crear mascota
 const crearMascota = async (req, res) => {
     try {
-        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis } = req.body;
+        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo } = req.body;
 
         // Verificar que el cliente exista
         const cliente = await prisma.cliente.findUnique({
@@ -95,7 +95,8 @@ const crearMascota = async (req, res) => {
                 clienteId: parseInt(clienteId),
                 vacunasAlDia: vacunasAlDia || false,
                 ultimaRevision: ultimaRevision || '—',
-                proximaDosis: proximaDosis || '—'
+                proximaDosis: proximaDosis || '—',
+                objetivo: objetivo || 'Normal'
             },
             include: {
                 cliente: {
@@ -187,7 +188,7 @@ const obtenerMascota = async (req, res) => {
 const actualizarMascota = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis } = req.body;
+        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo } = req.body;
 
         // Verificar si cambia de cliente para actualizar contadores (opcional, avanzado)
         // Por simplicidad, asumimos que no cambia de cliente frecuentemente o no manejamos el contador en update complejo ahora
@@ -211,7 +212,8 @@ const actualizarMascota = async (req, res) => {
                 ...(clienteId && { clienteId: parseInt(clienteId) }),
                 vacunasAlDia: vacunasAlDia !== undefined ? vacunasAlDia : undefined,
                 ultimaRevision,
-                proximaDosis
+                proximaDosis,
+                objetivo
             },
             include: {
                 cliente: {

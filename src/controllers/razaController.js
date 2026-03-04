@@ -16,12 +16,14 @@ const listarRazas = async (req, res) => {
 // Crear raza
 const crearRaza = async (req, res) => {
     try {
-        const { nombre, promedioVida, promedioPeso } = req.body;
+        const { nombre, promedioVida, promedioPeso, categoria, umbralMadurez } = req.body;
         const raza = await prisma.raza.create({
-            data: { 
-                nombre, 
-                promedioVida: promedioVida ? parseFloat(promedioVida) : null, 
-                promedioPeso: promedioPeso ? parseFloat(promedioPeso) : null 
+            data: {
+                nombre,
+                promedioVida: promedioVida ? parseFloat(promedioVida) : null,
+                promedioPeso: promedioPeso ? parseFloat(promedioPeso) : null,
+                categoria: categoria || null,
+                umbralMadurez: umbralMadurez ? parseFloat(umbralMadurez) : null
             }
         });
         res.status(201).json({ success: true, data: { raza }, message: 'Raza creada' });
@@ -35,13 +37,15 @@ const crearRaza = async (req, res) => {
 const actualizarRaza = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, promedioVida, promedioPeso } = req.body;
+        const { nombre, promedioVida, promedioPeso, categoria, umbralMadurez } = req.body;
         const raza = await prisma.raza.update({
             where: { id: parseInt(id) },
-            data: { 
-                nombre, 
-                promedioVida: promedioVida ? parseFloat(promedioVida) : null, 
-                promedioPeso: promedioPeso ? parseFloat(promedioPeso) : null 
+            data: {
+                nombre,
+                promedioVida: promedioVida ? parseFloat(promedioVida) : null,
+                promedioPeso: promedioPeso ? parseFloat(promedioPeso) : null,
+                categoria: categoria || null,
+                umbralMadurez: umbralMadurez ? parseFloat(umbralMadurez) : null
             }
         });
         res.json({ success: true, data: { raza }, message: 'Raza actualizada' });

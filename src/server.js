@@ -22,7 +22,9 @@ const notificacionRoutes = require('./routes/notificacionRoutes');
 const alergiaRoutes = require('./routes/alergiaRoutes');
 const vacunasRoutes = require('./routes/vacunasRoutes');
 const suscripcionRoutes = require('./routes/suscripcionRoutes');
-
+const descuentoRoutes = require('./routes/descuentoRoutes');
+const datoCuriosoRoutes = require('./routes/datoCuriosoRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 // ...
 
 // ...
@@ -110,7 +112,12 @@ app.use('/api/notificaciones', notificacionRoutes);
 app.use('/api/alergias', alergiaRoutes);
 app.use('/api/vacunas', vacunasRoutes);
 app.use('/api/suscripciones', suscripcionRoutes);
+app.use('/api/descuentos', descuentoRoutes);
+app.use('/api/datos-curiosos', datoCuriosoRoutes);
+app.use('/api/upload', uploadRoutes);
 
+// Servir la carpeta uploads como estática
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Ruta de salud del servidor
 app.get('/api/health', (req, res) => {
   res.json({
