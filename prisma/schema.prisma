@@ -280,6 +280,8 @@ model Descuento {
   fechaInicio DateTime
   fechaFin    DateTime
   porcentaje  Float
+  tipoCliente String   @default("nuevo_cliente") // "nuevo_cliente" | "cliente_recurrente"
+  activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -294,4 +296,25 @@ model DatoCurioso {
   updatedAt   DateTime @updatedAt
 
   @@map("datos_curiosos")
+}
+
+model ZonaEnvio {
+  id          Int      @id @default(autoincrement())
+  distrito    String   @unique
+  costo       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("zonas_envio")
+}
+
+model CondicionCorporal {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique  // "Delgado", "Ideal", "Sobrepeso"
+  descripcion String   @db.Text // descripción visible en el wizard
+  mensaje     String?  @db.Text // aviso médico (ej: "Detectamos sobrepeso...")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("condiciones_corporales")
 }

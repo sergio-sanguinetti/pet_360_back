@@ -25,7 +25,8 @@ const suscripcionRoutes = require('./routes/suscripcionRoutes');
 const descuentoRoutes = require('./routes/descuentoRoutes');
 const datoCuriosoRoutes = require('./routes/datoCuriosoRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
-// ...
+const zonaEnvioRoutes = require('./routes/zonaEnvioRoutes');
+const condicionCorporalRoutes = require('./routes/condicionCorporalRoutes');
 
 // ...
 // Importar middleware
@@ -115,7 +116,8 @@ app.use('/api/suscripciones', suscripcionRoutes);
 app.use('/api/descuentos', descuentoRoutes);
 app.use('/api/datos-curiosos', datoCuriosoRoutes);
 app.use('/api/upload', uploadRoutes);
-
+app.use('/api/zonas-envio', zonaEnvioRoutes);
+app.use('/api/condiciones-corporales', condicionCorporalRoutes);
 // Servir la carpeta uploads como estática
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Ruta de salud del servidor
