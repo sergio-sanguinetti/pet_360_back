@@ -11,9 +11,9 @@ const getVacunas = async (req, res) => {
 
 const createVacuna = async (req, res) => {
     try {
-        const { nombre, enfermedad } = req.body;
+        const { nombre, descripcion, recurrente, frecuencia } = req.body;
         const nueva = await prisma.vacuna.create({
-            data: { nombre, enfermedad }
+            data: { nombre, descripcion, recurrente: Boolean(recurrente), frecuencia }
         });
         res.status(201).json({ success: true, message: 'Creada exitosamente', data: { vacuna: nueva } });
     } catch (error) {
@@ -24,10 +24,10 @@ const createVacuna = async (req, res) => {
 const updateVacuna = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, enfermedad } = req.body;
+        const { nombre, descripcion, recurrente, frecuencia } = req.body;
         const mod = await prisma.vacuna.update({
             where: { id: Number(id) },
-            data: { nombre, enfermedad }
+            data: { nombre, descripcion, recurrente: Boolean(recurrente), frecuencia }
         });
         res.json({ success: true, message: 'Actualizada', data: { vacuna: mod } });
     } catch (error) {

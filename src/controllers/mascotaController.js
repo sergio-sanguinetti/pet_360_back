@@ -71,7 +71,7 @@ const listarMascotas = async (req, res) => {
 // Crear mascota
 const crearMascota = async (req, res) => {
     try {
-        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo } = req.body;
+        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo, vacunasMascota, tratamientosMascota, alergiasMascota } = req.body;
 
         // Verificar que el cliente exista
         const cliente = await prisma.cliente.findUnique({
@@ -96,7 +96,10 @@ const crearMascota = async (req, res) => {
                 vacunasAlDia: vacunasAlDia || false,
                 ultimaRevision: ultimaRevision || '—',
                 proximaDosis: proximaDosis || '—',
-                objetivo: objetivo || 'Normal'
+                objetivo: objetivo || 'Normal',
+                vacunasMascota: vacunasMascota ? (typeof vacunasMascota === 'string' ? vacunasMascota : JSON.stringify(vacunasMascota)) : null,
+                tratamientosMascota: tratamientosMascota ? (typeof tratamientosMascota === 'string' ? tratamientosMascota : JSON.stringify(tratamientosMascota)) : null,
+                alergiasMascota: alergiasMascota ? (typeof alergiasMascota === 'string' ? alergiasMascota : JSON.stringify(alergiasMascota)) : null
             },
             include: {
                 cliente: {
@@ -188,7 +191,7 @@ const obtenerMascota = async (req, res) => {
 const actualizarMascota = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo } = req.body;
+        const { nombre, especie, raza, edad, pesoKg, clienteId, vacunasAlDia, ultimaRevision, proximaDosis, objetivo, vacunasMascota, tratamientosMascota, alergiasMascota } = req.body;
 
         // Verificar si cambia de cliente para actualizar contadores (opcional, avanzado)
         // Por simplicidad, asumimos que no cambia de cliente frecuentemente o no manejamos el contador en update complejo ahora
@@ -213,7 +216,10 @@ const actualizarMascota = async (req, res) => {
                 vacunasAlDia: vacunasAlDia !== undefined ? vacunasAlDia : undefined,
                 ultimaRevision,
                 proximaDosis,
-                objetivo
+                objetivo,
+                ...(vacunasMascota !== undefined && { vacunasMascota: typeof vacunasMascota === 'string' ? vacunasMascota : JSON.stringify(vacunasMascota) }),
+                ...(tratamientosMascota !== undefined && { tratamientosMascota: typeof tratamientosMascota === 'string' ? tratamientosMascota : JSON.stringify(tratamientosMascota) }),
+                ...(alergiasMascota !== undefined && { alergiasMascota: typeof alergiasMascota === 'string' ? alergiasMascota : JSON.stringify(alergiasMascota) })
             },
             include: {
                 cliente: {

@@ -62,6 +62,7 @@ model Mascota {
   vacunasAlDia   Boolean  @default(false)
   ultimaRevision String?  @default("—")
   proximaDosis   String?  @default("—")
+  foto           String?  @db.LongText
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -236,7 +237,9 @@ model Alergia {
 model Vacuna {
   id          Int      @id @default(autoincrement())
   nombre      String   
-  enfermedad  String?  @db.Text
+  descripcion String?  @db.Text
+  recurrente  Boolean  @default(false)
+  frecuencia  String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const bcrypt = require('bcryptjs');
 
 // Listar todos los clientes
 const listarClientes = async (req, res) => {
@@ -153,17 +154,24 @@ const actualizarCliente = async (req, res) => {
             }
         }
 
+        const dataUpdate = {
+            nombre,
+            email,
+            telefono,
+            distrito,
+            status,
+            mascotas,
+            ...(ultimaCompra !== undefined && { ultimaCompra: ultimaCompra ? new Date(ultimaCompra) : null })
+        };
+
+        if (req.body.password) {
+            const salt = await bcrypt.genSalt(10);
+            dataUpdate.password = await bcrypt.hash(req.body.password, salt);
+        }
+
         const clienteActualizado = await prisma.cliente.update({
             where: { id: parseInt(id) },
-            data: {
-                nombre,
-                email,
-                telefono,
-                distrito,
-                status,
-                mascotas,
-                ...(ultimaCompra !== undefined && { ultimaCompra: ultimaCompra ? new Date(ultimaCompra) : null })
-            }
+            data: dataUpdate
         });
 
         res.json({
@@ -228,19 +236,25 @@ const completarWizard = async (req, res) => {
                     actividad: mascotaData.actividad,
                     sexo: mascotaData.sexo,
                     castrado: mascotaData.castrado,
+                    foto: mascotaData.foto,
+                    vacunasMascota: mascotaData.vacunasMascota ? JSON.stringify(mascotaData.vacunasMascota) : null,
+                    tratamientosMascota: mascotaData.tratamientosMascota ? JSON.stringify(mascotaData.tratamientosMascota) : null,
+                    alergiasMascota: mascotaData.alergiasMascota ? JSON.stringify(mascotaData.alergiasMascota) : null,
                     clienteId: parseInt(clienteId)
                 }
             });
 
             // 2. Crear Suscripción
+            const planSeleccionado = suscripcionData.plan || 'mensual';
             const proxima = new Date();
-            proxima.setDate(proxima.getDate() + 3);
+            const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
+            proxima.setDate(proxima.getDate() + diasFrecuencia);
 
             const nuevaSuscripcion = await tx.suscripcion.create({
                 data: {
                     clienteId: parseInt(clienteId),
                     mascotaId: nuevaMascota.id,
-                    plan: suscripcionData.plan || 'mensual',
+                    plan: planSeleccionado,
                     proximaEntrega: proxima,
                     estado: 'activa',
                     montoBase: parseFloat(suscripcionData.montoBase || 0)
@@ -299,6 +313,10 @@ const agregarMascota = async (req, res) => {
                     actividad: mascotaData.actividad,
                     sexo: mascotaData.sexo,
                     castrado: mascotaData.castrado,
+                    foto: mascotaData.foto,
+                    vacunasMascota: mascotaData.vacunasMascota ? JSON.stringify(mascotaData.vacunasMascota) : null,
+                    tratamientosMascota: mascotaData.tratamientosMascota ? JSON.stringify(mascotaData.tratamientosMascota) : null,
+                    alergiasMascota: mascotaData.alergiasMascota ? JSON.stringify(mascotaData.alergiasMascota) : null,
                     clienteId: parseInt(clienteId)
                 }
             });
@@ -306,14 +324,16 @@ const agregarMascota = async (req, res) => {
             let nuevaSuscripcion = null;
             // 2. Crear Suscripción si se proporcionan datos
             if (suscripcionData) {
+                const planSeleccionado = suscripcionData.plan || 'mensual';
                 const proxima = new Date();
-                proxima.setDate(proxima.getDate() + 3);
+                const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
+                proxima.setDate(proxima.getDate() + diasFrecuencia);
 
                 nuevaSuscripcion = await tx.suscripcion.create({
                     data: {
                         clienteId: parseInt(clienteId),
                         mascotaId: nuevaMascota.id,
-                        plan: suscripcionData.plan || 'mensual',
+                        plan: planSeleccionado,
                         proximaEntrega: proxima,
                         estado: 'activa',
                         montoBase: parseFloat(suscripcionData.montoBase || 0)
