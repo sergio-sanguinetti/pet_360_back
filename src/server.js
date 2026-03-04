@@ -69,7 +69,7 @@ app.use('/api/', limiter);
 // Middleware de CORS
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl requests)
+    // Permitir requests sin origin (como mobile apps o curl requests) CAMBIOS
     if (!origin) return callback(null, true);
 
     // Lista de orígenes permitidos
