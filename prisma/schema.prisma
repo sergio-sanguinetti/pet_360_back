@@ -299,6 +299,19 @@ model DatoCurioso {
   @@map("datos_curiosos")
 }
 
+model Recomendacion {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String   @db.Text
+  categoria   String   @default("General") // Actividad, Salud, Nutricion, General
+  icono       String   @default("star")     // Material Symbols icon name
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("recomendaciones")
+}
+
 model ZonaEnvio {
   id          Int      @id @default(autoincrement())
   distrito    String   @unique
