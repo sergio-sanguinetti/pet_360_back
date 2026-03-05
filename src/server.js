@@ -27,11 +27,13 @@ const datoCuriosoRoutes = require('./routes/datoCuriosoRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const zonaEnvioRoutes = require('./routes/zonaEnvioRoutes');
 const condicionCorporalRoutes = require('./routes/condicionCorporalRoutes');
+const pushRoutes = require('./routes/pushRoutes');
 
 // ...
 // Importar middleware
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
+const { initCronJobs } = require('./utils/cronJobs');
 
 // Importar Prisma Client
 const prisma = require('./config/prisma');
@@ -118,6 +120,7 @@ app.use('/api/datos-curiosos', datoCuriosoRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/zonas-envio', zonaEnvioRoutes);
 app.use('/api/condiciones-corporales', condicionCorporalRoutes);
+app.use('/api/push', pushRoutes);
 // Servir la carpeta uploads como estática
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Ruta de salud del servidor
@@ -165,6 +168,9 @@ app.listen(PORT, () => {
   logger.info(`🌐 URL: http://localhost:${PORT}`);
   logger.info(`📋 Documentación: http://localhost:${PORT}/api-docs`);
 });
+
+// Arrancar cron jobs automáticos de notificaciones
+initCronJobs();
 
 // Manejo de errores no capturados
 process.on('uncaughtException', (err) => {

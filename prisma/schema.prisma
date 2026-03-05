@@ -38,6 +38,7 @@ model Cliente {
   updatedAt    DateTime @updatedAt
   mascotasDetalle Mascota[]
   suscripciones   Suscripcion[]
+  pushSubscriptions PushSubscription[]
 
   @@map("clientes")
 }
@@ -316,5 +317,18 @@ model CondicionCorporal {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+
   @@map("condiciones_corporales")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  clienteId Int
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  endpoint  String   @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("push_subscriptions")
 }
