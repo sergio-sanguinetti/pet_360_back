@@ -257,7 +257,9 @@ const completarWizard = async (req, res) => {
                     plan: planSeleccionado,
                     proximaEntrega: proxima,
                     estado: 'activa',
-                    montoBase: parseFloat(suscripcionData.montoBase || 0)
+                    montoBase: parseFloat(suscripcionData.montoBase || 0),
+                    recetaNombre: suscripcionData.recetaNombre || null,
+                    recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
                 }
             });
 
@@ -336,7 +338,9 @@ const agregarMascota = async (req, res) => {
                         plan: planSeleccionado,
                         proximaEntrega: proxima,
                         estado: 'activa',
-                        montoBase: parseFloat(suscripcionData.montoBase || 0)
+                        montoBase: parseFloat(suscripcionData.montoBase || 0),
+                        recetaNombre: suscripcionData.recetaNombre || null,
+                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
                     }
                 });
             }

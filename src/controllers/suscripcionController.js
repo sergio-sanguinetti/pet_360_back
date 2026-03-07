@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const createSuscripcion = async (req, res) => {
     try {
-        const { clienteId, mascotaId, plan, proximaEntrega, montoBase } = req.body;
+        const { clienteId, mascotaId, plan, proximaEntrega, montoBase, recetaNombre, recetaId } = req.body;
 
         const suscripcion = await prisma.suscripcion.create({
             data: {
@@ -12,6 +12,8 @@ const createSuscripcion = async (req, res) => {
                 plan,
                 proximaEntrega: new Date(proximaEntrega),
                 montoBase,
+                recetaNombre: recetaNombre || null,
+                recetaId: recetaId != null ? parseInt(recetaId) : null,
                 estado: 'activa'
             },
         });
@@ -25,12 +27,18 @@ const createSuscripcion = async (req, res) => {
 
 const getSuscripciones = async (req, res) => {
     try {
+        const { mascotaId } = req.query;
+        const where = {};
+        if (mascotaId !== undefined && mascotaId !== '') {
+            where.mascotaId = parseInt(mascotaId);
+        }
         const suscripciones = await prisma.suscripcion.findMany({
+            where,
             include: {
                 cliente: true,
                 mascota: true
             },
-            orderBy: { proximaEntrega: 'asc' }
+            orderBy: { createdAt: 'desc' }
         });
         res.json(suscripciones);
     } catch (error) {
@@ -59,9 +67,11 @@ const getSuscripcionById = async (req, res) => {
 
 const updateSuscripcion = async (req, res) => {
     try {
-        const { plan, proximaEntrega, estado, montoBase } = req.body;
+        const { plan, proximaEntrega, estado, montoBase, recetaNombre, recetaId } = req.body;
 
         const updateData = { plan, estado, montoBase };
+        if (recetaNombre !== undefined) updateData.recetaNombre = recetaNombre || null;
+        if (recetaId !== undefined) updateData.recetaId = recetaId != null ? parseInt(recetaId) : null;
         if (proximaEntrega) {
             updateData.proximaEntrega = new Date(proximaEntrega);
         }

@@ -257,6 +257,8 @@ model Suscripcion {
   proximaEntrega   DateTime
   estado           String   @default("activa") // "activa", "pausada", "cancelada"
   montoBase        Float    @default(0)
+  recetaNombre     String?  // nombre de la receta asociada (ej: POLLO VITAL, Cordero)
+  recetaId         Int?     // id de receta en catálogo si aplica
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
