@@ -111,6 +111,17 @@ const crearMascota = async (req, res) => {
             }
         });
 
+        // Si se registró un peso inicial, crear el primer registro en el historial
+        if (pesoKg) {
+            await prisma.historialPeso.create({
+                data: {
+                    mascotaId: nuevaMascota.id,
+                    pesoKg: parseFloat(pesoKg),
+                    nota: 'Peso inicial al registro'
+                }
+            });
+        }
+
         // Actualizar contador de mascotas en cliente
         await prisma.cliente.update({
             where: { id: parseInt(clienteId) },
