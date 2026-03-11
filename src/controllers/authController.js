@@ -212,7 +212,7 @@ const registrarCliente = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Errores de validación', errors: errors.array() });
     }
 
-    const { email, password, nombre } = req.body;
+    const { email, password, nombre, telefono } = req.body;
 
     const clienteExistente = await prisma.cliente.findUnique({ where: { email } });
     if (clienteExistente) {
@@ -227,6 +227,7 @@ const registrarCliente = async (req, res) => {
         email,
         password: passwordHash,
         nombre: nombre || 'Nuevo Cliente',
+        ...(telefono ? { telefono } : {}),
         status: 'activo'
       },
       select: {
