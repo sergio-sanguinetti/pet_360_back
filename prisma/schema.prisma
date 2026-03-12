@@ -77,7 +77,7 @@ model Mascota {
 
 model Raza {
   id           Int      @id @default(autoincrement())
-  nombre        String   @unique
+  nombre        String
   promedioVida  Float?
   promedioPeso  Float?
   categoria     String?

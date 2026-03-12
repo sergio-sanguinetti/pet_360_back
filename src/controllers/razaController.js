@@ -1,15 +1,26 @@
 const prisma = require('../config/prisma');
 
-// Listar todas las razas
+// Listar todas las razas (solo campos necesarios para evitar payload grande y problemas de serialización)
 const listarRazas = async (req, res) => {
     try {
         const razas = await prisma.raza.findMany({
+            select: {
+                id: true,
+                nombre: true,
+                promedioVida: true,
+                promedioPeso: true,
+                categoria: true,
+                umbralMadurez: true
+            },
             orderBy: { nombre: 'asc' }
         });
         res.json({ success: true, data: { razas } });
     } catch (error) {
         console.error('Error al listar razas:', error);
-        res.status(500).json({ success: false, message: 'Error al listar razas' });
+        const message = process.env.NODE_ENV === 'production'
+            ? 'Error al listar razas'
+            : (error.message || 'Error al listar razas');
+        res.status(500).json({ success: false, message });
     }
 };
 
