@@ -217,8 +217,8 @@ const completarWizard = async (req, res) => {
     try {
         const { clienteId, mascotaData, suscripcionData } = req.body;
 
-        if (!clienteId || !mascotaData || !suscripcionData) {
-            return res.status(400).json({ success: false, message: 'Faltan datos requeridos (clienteId, mascotaData o suscripcionData)' });
+        if (!clienteId || !mascotaData) {
+            return res.status(400).json({ success: false, message: 'Faltan datos requeridos (clienteId o mascotaData)' });
         }
 
         // Usar una transacción atómica para asegurar que todas las operaciones se realicen o ninguna
@@ -244,24 +244,27 @@ const completarWizard = async (req, res) => {
                 }
             });
 
-            // 2. Crear Suscripción
-            const planSeleccionado = suscripcionData.plan || 'mensual';
-            const proxima = new Date();
-            const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
-            proxima.setDate(proxima.getDate() + diasFrecuencia);
+            // 2. Crear Suscripción (sólo si hay suscripcionData)
+            let nuevaSuscripcion = null;
+            if (suscripcionData) {
+                const planSeleccionado = suscripcionData.plan || 'mensual';
+                const proxima = new Date();
+                const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
+                proxima.setDate(proxima.getDate() + diasFrecuencia);
 
-            const nuevaSuscripcion = await tx.suscripcion.create({
-                data: {
-                    clienteId: parseInt(clienteId),
-                    mascotaId: nuevaMascota.id,
-                    plan: planSeleccionado,
-                    proximaEntrega: proxima,
-                    estado: 'activa',
-                    montoBase: parseFloat(suscripcionData.montoBase || 0),
-                    recetaNombre: suscripcionData.recetaNombre || null,
-                    recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
-                }
-            });
+                nuevaSuscripcion = await tx.suscripcion.create({
+                    data: {
+                        clienteId: parseInt(clienteId),
+                        mascotaId: nuevaMascota.id,
+                        plan: planSeleccionado,
+                        proximaEntrega: proxima,
+                        estado: 'activa',
+                        montoBase: parseFloat(suscripcionData.montoBase || 0),
+                        recetaNombre: suscripcionData.recetaNombre || null,
+                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
+                    }
+                });
+            }
 
             // 3. Actualizar Cliente marcando wizardCompletado y aumentando el contador
             await tx.cliente.update({

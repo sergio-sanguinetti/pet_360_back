@@ -107,7 +107,9 @@ model Configuracion {
   encabezadoBoleta  String?
   direccionBoleta   String?
   leyendaSunat      String?
-  piePagina         String?
+// Landing Page
+  landingBannerUrl  String?  @db.Text
+  landingBannerActivo Boolean @default(false)
 
   updatedAt         DateTime @updatedAt
 

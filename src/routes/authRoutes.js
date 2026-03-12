@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { registrar, login, perfil, registrarCliente, loginCliente } = require('../controllers/authController');
+const { registrar, login, perfil, registrarCliente, loginCliente, googleLoginCliente } = require('../controllers/authController');
 const { verificarToken } = require('../middleware/authMiddleware');
 
 // Validaciones para registro
@@ -43,6 +43,7 @@ router.get('/perfil', verificarToken, perfil);
 // Rutas de clientes
 router.post('/cliente/registro', validacionesRegistro, registrarCliente);
 router.post('/cliente/login', validacionesLogin, loginCliente);
+router.post('/cliente/google', googleLoginCliente);
 
 module.exports = router;
 

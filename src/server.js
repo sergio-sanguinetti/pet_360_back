@@ -30,6 +30,7 @@ const condicionCorporalRoutes = require('./routes/condicionCorporalRoutes');
 const pushRoutes = require('./routes/pushRoutes');
 const recomendacionRoutes = require('./routes/recomendacionRoutes');
 const pagoRoutes = require('./routes/pagoRoutes');
+const reportesRoutes = require('./routes/reportesRoutes');
 
 // ...
 // Importar middleware
@@ -125,6 +126,7 @@ app.use('/api/condiciones-corporales', condicionCorporalRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/recomendaciones', recomendacionRoutes);
 app.use('/api/pagos', pagoRoutes);
+app.use('/api/reportes', reportesRoutes);
 // Servir la carpeta uploads como estática
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Ruta de salud del servidor

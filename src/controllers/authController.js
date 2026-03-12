@@ -290,11 +290,61 @@ const loginCliente = async (req, res) => {
   }
 };
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const googleLoginCliente = async (req, res) => {
+  try {
+    const { token: googleToken } = req.body;
+    if (!googleToken) {
+      return res.status(400).json({ success: false, message: 'Google token es requerido' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: googleToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    let cliente = await prisma.cliente.findUnique({ where: { email } });
+
+    if (!cliente) {
+      // Crear nuevo cliente si no existe
+      cliente = await prisma.cliente.create({
+        data: {
+          email,
+          nombre: name || 'Nuevo Cliente',
+          status: 'activo',
+          // Google login accounts might not have a standalone password. For now, we leave it null or dummy
+        },
+      });
+    }
+
+    if (cliente.status !== 'activo') {
+      return res.status(401).json({ success: false, message: 'Cuenta inactiva. Contacta soporte.' });
+    }
+
+    const token = jwt.sign(
+      { id: cliente.id, email: cliente.email, rol: 'cliente' },
+      process.env.JWT_SECRET || 'secret_key_default',
+      { expiresIn: '24h' }
+    );
+
+    res.json({ success: true, message: 'Login con Google exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: cliente.wizardCompletado }, token } });
+  } catch (error) {
+    console.error('Error en login con Google:', error);
+    res.status(500).json({ success: false, message: 'Error al iniciar sesión con Google', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+};
+
 module.exports = {
   registrar,
   login,
   perfil,
   registrarCliente,
-  loginCliente
+  loginCliente,
+  googleLoginCliente
 };
 

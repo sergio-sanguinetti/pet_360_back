@@ -37,7 +37,8 @@ const actualizarConfiguracion = async (req, res) => {
     try {
         const {
             razonSocial, nombreComercial, ruc, direccionFiscal, departamento, telefono, email,
-            serieBoleta, numeroSiguiente, encabezadoBoleta, direccionBoleta, leyendaSunat, piePagina
+            serieBoleta, numeroSiguiente, encabezadoBoleta, direccionBoleta, leyendaSunat, piePagina,
+            landingBannerUrl, landingBannerActivo
         } = req.body;
 
         let config = await prisma.configuracion.findFirst();
@@ -66,7 +67,9 @@ const actualizarConfiguracion = async (req, res) => {
                 encabezadoBoleta,
                 direccionBoleta,
                 leyendaSunat,
-                piePagina
+                piePagina,
+                landingBannerUrl,
+                landingBannerActivo: landingBannerActivo !== undefined ? (landingBannerActivo === 'true' || landingBannerActivo === true) : undefined
             }
         });
 
