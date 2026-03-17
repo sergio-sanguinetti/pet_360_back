@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { procesarNotificaciones } = require('../utils/cronJobs');
 
 // Obtener todas
 exports.getNotificaciones = async (req, res) => {
@@ -67,5 +68,15 @@ exports.deleteNotificacion = async (req, res) => {
         res.json({ message: 'Notificacion eliminada correctamente' });
     } catch (error) {
         res.status(500).json({ message: 'Error al eliminar notificacion', error: error.message });
+    }
+};
+
+// Ejecutar manualmente el proceso de notificaciones de salud (vacunas, antipulgas, etc.)
+exports.runSaludAutomatica = async (req, res) => {
+    try {
+        await procesarNotificaciones(true);
+        res.json({ message: 'Proceso de notificaciones de salud ejecutado correctamente' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al ejecutar el proceso de salud', error: error.message });
     }
 };

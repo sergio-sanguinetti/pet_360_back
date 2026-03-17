@@ -70,10 +70,16 @@ const sendBroadcastPush = async (titulo, cuerpo) => {
  * Proceso principal de revisión y envío de notificaciones.
  * Se ejecuta diariamente entre 11am y 1pm (programado a las 12:00).
  */
-const procesarNotificaciones = async () => {
+const procesarNotificaciones = async (force = false) => {
     logger.info('⏰ Ejecutando revisión de notificaciones automáticas...');
     try {
         const hoy = new Date();
+        const hora = hoy.getHours();
+        const minutos = hoy.getMinutes();
+
+        // Ventana de envío diario (12:00 - 12:10 aprox) para evitar duplicados al correr cada 10 minutos,
+        // salvo cuando se ejecuta en modo "force" desde el panel de administración.
+        const puedeEnviarHoy = force || (hora === 12 && minutos < 10);
 
         // --- 1. Notificaciones globales del panel admin ---
         const globales = await prisma.notificacion.findMany({
@@ -132,7 +138,8 @@ const procesarNotificaciones = async () => {
                     if (Array.isArray(vacunasAplicadas)) {
                         for (const VA of vacunasAplicadas) {
                             const cat = catalogVacunas.find(v => v.nombre === VA.nombre);
-                            if (cat && cat.recurrente && VA.fecha) {
+                            const baseFecha = VA.fecha || (Array.isArray(VA.historial) && VA.historial.length > 0 ? VA.historial[0] : null);
+                            if (cat && cat.recurrente && baseFecha) {
                                 let diasSumar = 0;
                                 const freq = (cat.frecuencia || '').toLowerCase();
                                 if (freq.includes('anual')) diasSumar = 365;
@@ -141,14 +148,32 @@ const procesarNotificaciones = async () => {
                                 else if (freq.includes('mensual') || freq.includes('mes')) diasSumar = 30;
 
                                 if (diasSumar > 0) {
-                                    const proxVacuna = new Date(VA.fecha);
+                                    const proxVacuna = new Date(baseFecha);
                                     proxVacuna.setDate(proxVacuna.getDate() + diasSumar);
                                     const dias = Math.ceil((proxVacuna.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
-                                    if (dias === 2) {
-                                        await sendPushToCliente(m.clienteId, '💉 Vacuna próxima', `La vacuna ${cat.nombre} de ${m.nombre} le toca en 2 días.`, '/salud-mis-mascotas');
-                                    } else if (dias <= 0 && dias > -30) {
-                                        await sendPushToCliente(m.clienteId, '⚠️ Vacuna vencida', `La vacuna ${cat.nombre} de ${m.nombre} venció. ¡Agenda una cita!`, '/salud-mis-mascotas');
+                                    // Aviso 1 mes antes y vencimiento, solo una vez al día
+                                    if (puedeEnviarHoy && dias === 30) {
+                                        await sendPushToCliente(
+                                            m.clienteId,
+                                            '💉 Vacuna próxima (1 mes)',
+                                            `La vacuna ${cat.nombre} de ${m.nombre} está programada en aproximadamente 1 mes.`,
+                                            '/salud-mis-mascotas'
+                                        );
+                                    } else if (puedeEnviarHoy && dias === 2) {
+                                        await sendPushToCliente(
+                                            m.clienteId,
+                                            '💉 Vacuna próxima',
+                                            `La vacuna ${cat.nombre} de ${m.nombre} le toca en 2 días.`,
+                                            '/salud-mis-mascotas'
+                                        );
+                                    } else if (puedeEnviarHoy && dias <= 0 && dias > -30) {
+                                        await sendPushToCliente(
+                                            m.clienteId,
+                                            '⚠️ Vacuna vencida',
+                                            `La vacuna ${cat.nombre} de ${m.nombre} venció. ¡Agenda una cita!`,
+                                            '/salud-mis-mascotas'
+                                        );
                                     }
                                 }
                             }
@@ -163,21 +188,46 @@ const procesarNotificaciones = async () => {
                     const trat = JSON.parse(m.tratamientosMascota);
 
                     // Antipulgas
-                    if (trat.antipulgas && trat.fechaAntipulga) {
+                    const histAntip = Array.isArray(trat.antipulgasHistorial) ? trat.antipulgasHistorial : [];
+                    const ultimaAntip = histAntip.length > 0 ? histAntip[0] : null;
+
+                    if (trat.antipulgas && (trat.fechaAntipulga || ultimaAntip?.fecha)) {
                         const catA = catalogAntipulgas.find(a => a.nombre === trat.antipulgas);
                         if (catA) {
-                            let d = 30;
-                            if (catA.frecuencia.includes('90')) d = 90;
-                            else if (catA.frecuencia.includes('60')) d = 60;
+                            let d = 0;
+                            const freqA = (catA.frecuencia || '').toLowerCase();
+                            if (freqA.includes('anual')) d = 365;
+                            else if (freqA.includes('semestral')) d = 180;
+                            else if (freqA.includes('trimestral')) d = 90;
+                            else if (freqA.includes('mensual') || freqA.includes('mes')) d = 30;
 
-                            const fProx = new Date(trat.fechaAntipulga);
-                            fProx.setDate(fProx.getDate() + d);
-                            const diasA = Math.ceil((fProx.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+                            if (d > 0) {
+                                const fProx = new Date(trat.fechaAntipulga || ultimaAntip.fecha);
+                                fProx.setDate(fProx.getDate() + d);
+                                const diasA = Math.ceil((fProx.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
-                            if (diasA === 2) {
-                                await sendPushToCliente(m.clienteId, '🐛 Antipulgas', `A ${m.nombre} le toca su antipulgas en 2 días.`, '/salud-mis-mascotas');
-                            } else if (diasA <= 0) {
-                                await sendPushToCliente(m.clienteId, '⚠️ Antipulgas vencido', `¡${m.nombre} ya debe recibir su tratamiento antipulgas!`, '/salud-mis-mascotas');
+                                if (puedeEnviarHoy && diasA === 30) {
+                                    await sendPushToCliente(
+                                        m.clienteId,
+                                        '🐛 Antipulgas próximo (1 mes)',
+                                        `El tratamiento antipulgas de ${m.nombre} está programado en aproximadamente 1 mes.`,
+                                        '/salud-mis-mascotas'
+                                    );
+                                } else if (puedeEnviarHoy && diasA === 2) {
+                                    await sendPushToCliente(
+                                        m.clienteId,
+                                        '🐛 Antipulgas',
+                                        `A ${m.nombre} le toca su antipulgas en 2 días.`,
+                                        '/salud-mis-mascotas'
+                                    );
+                                } else if (puedeEnviarHoy && diasA <= 0 && diasA > -30) {
+                                    await sendPushToCliente(
+                                        m.clienteId,
+                                        '⚠️ Antipulgas vencido',
+                                        `¡${m.nombre} ya debe recibir su tratamiento antipulgas!`,
+                                        '/salud-mis-mascotas'
+                                    );
+                                }
                             }
                         }
                     }
@@ -215,12 +265,13 @@ const procesarNotificaciones = async () => {
 const initCronJobs = () => {
     logger.info('⏳ Registrando Cron Jobs del sistema...');
 
-    // Cada día a las 12:00 PM (hora local del servidor)
-    cron.schedule('0 12 * * *', () => {
+    // Ejecutar revisión cada 10 minutos.
+    // La lógica interna se encarga de que los avisos de salud se envíen solo 1 vez al día.
+    cron.schedule('*/10 * * * *', () => {
         procesarNotificaciones();
     }, { timezone: 'America/Lima' });
 
-    logger.info('✅ Cron Job de notificaciones registrado (diario 12:00 PM hora Lima).');
+    logger.info('✅ Cron Job de notificaciones registrado (cada 10 minutos, ventana diaria de envío).');
 };
 
-module.exports = { initCronJobs };
+module.exports = { initCronJobs, procesarNotificaciones };
