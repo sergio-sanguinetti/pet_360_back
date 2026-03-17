@@ -40,3 +40,21 @@ exports.unsubscribe = async (req, res) => {
         res.status(500).json({ message: 'Error eliminando suscripción', error: err.message });
     }
 };
+
+// GET /api/push/is-subscribed?clienteId=123
+exports.isSubscribed = async (req, res) => {
+    try {
+        const { clienteId } = req.query;
+        if (!clienteId) {
+            return res.status(400).json({ message: 'clienteId es requerido' });
+        }
+
+        const existing = await prisma.pushSubscription.findFirst({
+            where: { clienteId: parseInt(clienteId, 10) }
+        });
+
+        res.json({ subscribed: !!existing });
+    } catch (err) {
+        res.status(500).json({ message: 'Error verificando suscripción', error: err.message });
+    }
+};
