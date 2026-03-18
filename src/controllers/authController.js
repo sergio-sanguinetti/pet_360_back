@@ -403,7 +403,7 @@ const forgotPasswordCliente = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error al solicitar restablecer la contraseña',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error?.message || String(error)
     });
   }
 };
@@ -455,7 +455,7 @@ const resetPasswordCliente = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error al restablecer la contraseña',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error?.message || String(error)
     });
   }
 };
