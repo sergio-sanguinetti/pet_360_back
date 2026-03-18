@@ -385,7 +385,12 @@ const forgotPasswordCliente = async (req, res) => {
       }
     });
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperar-contrasena/cambiar?token=${tokenPlain}`;
+    const frontendResetBaseUrl =
+      process.env.PASSWORD_RESET_FRONTEND_URL ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:3000';
+
+    const resetUrl = `${frontendResetBaseUrl}/recuperar-contrasena/cambiar?token=${tokenPlain}`;
 
     await sendResetPasswordEmail({
       to: cliente.email,
