@@ -92,6 +92,49 @@ const sendResetPasswordEmail = async ({ to, resetUrl }) => {
     </div>
   `
 
+  // Preferimos Resend cuando está configurado (evita SMTP bloqueado).
+  if (process.env.RESEND_API_KEY) {
+    const from = process.env.RESEND_FROM || process.env.GMAIL_FROM || process.env.GMAIL_USER
+    if (!from) {
+      throw new Error('Falta RESEND_FROM (o GMAIL_FROM/GMAIL_USER) en el entorno')
+    }
+
+    const timeoutMs = Number(process.env.RESEND_TIMEOUT_MS || 20000)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const resendRes = await fetch(process.env.RESEND_API_URL || 'https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from,
+          to,
+          subject,
+          text: `Restablece tu contraseña aquí: ${resetUrl}`,
+          html
+        }),
+        signal: controller.signal
+      })
+
+      if (!resendRes.ok) {
+        const bodyText = await resendRes.text().catch(() => '')
+        throw new Error(`Resend falló (${resendRes.status}): ${bodyText || resendRes.statusText}`)
+      }
+      return
+    } catch (err) {
+      if (String(err?.name) === 'AbortError') {
+        throw new Error(`Resend timeout (> ${timeoutMs}ms) al enviar el email`)
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
   const cfg = getGmailConfig()
   const mailOptions = {
     from,
