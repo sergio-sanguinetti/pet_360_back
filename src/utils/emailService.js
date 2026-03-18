@@ -21,7 +21,7 @@ const getTransporter = () => {
 
 const sendResetPasswordEmail = async ({ to, resetUrl }) => {
   const from = process.env.GMAIL_FROM || process.env.GMAIL_USER
-  const subject = process.env.GMAIL_RESET_SUBJECT || 'PetLife 360 - Restablecer contraseña'
+  const subject = process.env.GMAIL_RESET_SUBJECT || 'PETLIFE 360 - Restablecer contraseña'
 
   if (!to) {
     throw new Error('Campo "to" requerido para enviar email')
