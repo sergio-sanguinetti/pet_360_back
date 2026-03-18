@@ -39,8 +39,26 @@ model Cliente {
   mascotasDetalle Mascota[]
   suscripciones   Suscripcion[]
   pushSubscriptions PushSubscription[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("clientes")
+}
+
+model PasswordResetToken {
+  id Int @id @default(autoincrement())
+  clienteId Int
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  // Guardamos un hash del token para no guardar el token en texto plano.
+  tokenHash String @unique
+
+  expiresAt DateTime
+  used Boolean @default(false)
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
 }
 
 model Mascota {

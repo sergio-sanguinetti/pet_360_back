@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { registrar, login, perfil, registrarCliente, loginCliente, googleLoginCliente } = require('../controllers/authController');
+const { registrar, login, perfil, registrarCliente, loginCliente, googleLoginCliente, forgotPasswordCliente, resetPasswordCliente } = require('../controllers/authController');
 const { verificarToken } = require('../middleware/authMiddleware');
 
 // Validaciones para registro
@@ -35,6 +35,22 @@ const validacionesLogin = [
     .withMessage('La contraseña es requerida')
 ];
 
+const validacionesForgotPassword = [
+  body('email')
+    .isEmail()
+    .withMessage('Debe ser un email válido')
+    .normalizeEmail()
+];
+
+const validacionesResetPassword = [
+  body('token')
+    .notEmpty()
+    .withMessage('El token es requerido'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('La contraseña debe tener al menos 6 caracteres')
+];
+
 // Rutas
 router.post('/registro', validacionesRegistro, registrar);
 router.post('/login', validacionesLogin, login);
@@ -44,6 +60,8 @@ router.get('/perfil', verificarToken, perfil);
 router.post('/cliente/registro', validacionesRegistro, registrarCliente);
 router.post('/cliente/login', validacionesLogin, loginCliente);
 router.post('/cliente/google', googleLoginCliente);
+router.post('/cliente/forgot-password', validacionesForgotPassword, forgotPasswordCliente);
+router.post('/cliente/reset-password', validacionesResetPassword, resetPasswordCliente);
 
 module.exports = router;
 

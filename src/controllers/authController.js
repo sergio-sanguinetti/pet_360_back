@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const { validationResult } = require('express-validator');
+const crypto = require('crypto');
+const { sendResetPasswordEmail } = require('../utils/emailService');
 
 // Registro de usuario
 const registrar = async (req, res) => {
@@ -339,12 +341,128 @@ const googleLoginCliente = async (req, res) => {
   }
 };
 
+// --- RESTABLECER CONTRASEÑA (CLIENTE) ---
+
+const forgotPasswordCliente = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Errores de validación',
+        errors: errors.array()
+      });
+    }
+
+    const { email } = req.body;
+
+    const cliente = await prisma.cliente.findUnique({
+      where: { email }
+    });
+
+    // Evitamos enumeración de cuentas: siempre respondemos éxito.
+    const genericMessage = 'Si el correo existe, te enviaremos un enlace para restablecer tu contraseña.';
+    if (!cliente) {
+      return res.json({ success: true, message: genericMessage });
+    }
+
+    const tokenPlain = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(tokenPlain).digest('hex');
+
+    const ttlMinutes = Number(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES || 30);
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+
+    // Invalidamos tokens anteriores del mismo usuario.
+    await prisma.passwordResetToken.deleteMany({
+      where: { clienteId: cliente.id }
+    });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        clienteId: cliente.id,
+        tokenHash,
+        expiresAt
+      }
+    });
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperar-contrasena/cambiar?token=${tokenPlain}`;
+
+    await sendResetPasswordEmail({
+      to: cliente.email,
+      resetUrl
+    });
+
+    return res.json({ success: true, message: genericMessage });
+  } catch (error) {
+    console.error('Error en forgotPasswordCliente:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al solicitar restablecer la contraseña',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+const resetPasswordCliente = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Errores de validación',
+        errors: errors.array()
+      });
+    }
+
+    const { token, newPassword } = req.body;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { cliente: true }
+    });
+
+    if (!resetToken || resetToken.used) {
+      return res.status(400).json({ success: false, message: 'El token es inválido.' });
+    }
+
+    if (resetToken.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ success: false, message: 'El token ha expirado.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await prisma.$transaction([
+      prisma.cliente.update({
+        where: { id: resetToken.clienteId },
+        data: { password: passwordHash }
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { used: true, usedAt: new Date() }
+      })
+    ]);
+
+    return res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+  } catch (error) {
+    console.error('Error en resetPasswordCliente:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al restablecer la contraseña',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   registrar,
   login,
   perfil,
   registrarCliente,
   loginCliente,
-  googleLoginCliente
+  googleLoginCliente,
+  forgotPasswordCliente,
+  resetPasswordCliente
 };
 
