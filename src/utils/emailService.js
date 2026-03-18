@@ -74,8 +74,6 @@ const sendResetPasswordEmail = async ({ to, resetUrl }) => {
     throw new Error('Campo "resetUrl" requerido para enviar email')
   }
 
-  const transporter = getTransporter()
-
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.4;">
       <p>Hola,</p>
@@ -94,45 +92,57 @@ const sendResetPasswordEmail = async ({ to, resetUrl }) => {
     </div>
   `
 
-  try {
-    await transporter.sendMail({
-      from,
-      to,
-      subject,
-      text: `Restablece tu contraseña aquí: ${resetUrl}`,
-      html
+  const cfg = getGmailConfig()
+  const mailOptions = {
+    from,
+    to,
+    subject,
+    text: `Restablece tu contraseña aquí: ${resetUrl}`,
+    html
+  }
+
+  const attemptSend = async ({ host, port, secure }) => {
+    const t = createTransport({
+      host,
+      port,
+      secure,
+      gmailUser: cfg.gmailUser,
+      gmailPass: cfg.gmailPass,
+      timeouts: cfg.timeouts
     })
+    return t.sendMail(mailOptions)
+  }
+
+  let firstErr = null
+  try {
+    // Intento 1: el puerto/config que esté en env (por defecto 587 STARTTLS)
+    await attemptSend({ host: cfg.host, port: cfg.port, secure: cfg.secure })
+    return
   } catch (err) {
-    // Fallback: si el entorno bloquea STARTTLS/587, probamos 465.
-    if (isTimeoutError(err)) {
-      const cfg = getGmailConfig()
-      const shouldFallback =
-        process.env.GMAIL_SMTP_PORT
-          ? Number(process.env.GMAIL_SMTP_PORT) === 587
-          : cfg.port === 587
+    firstErr = err
+    console.error(
+      '[emailService] Falló Gmail intento 1',
+      JSON.stringify({ host: cfg.host, port: cfg.port, secure: cfg.secure }),
+      err?.message || err
+    )
+  }
 
-      if (shouldFallback) {
-        const fallbackTransporter = createTransport({
-          host: cfg.host,
-          port: 465,
-          secure: true,
-          gmailUser: cfg.gmailUser,
-          gmailPass: cfg.gmailPass,
-          timeouts: cfg.timeouts
-        })
+  try {
+    // Intento 2: SMTPS 465
+    await attemptSend({ host: cfg.host, port: 465, secure: true })
+    return
+  } catch (err2) {
+    console.error(
+      '[emailService] Falló Gmail intento 2',
+      JSON.stringify({ host: cfg.host, port: 465, secure: true }),
+      err2?.message || err2
+    )
 
-        await fallbackTransporter.sendMail({
-          from,
-          to,
-          subject,
-          text: `Restablece tu contraseña aquí: ${resetUrl}`,
-          html
-        })
-        return
-      }
-    }
-
-    throw err
+    const msg1 = firstErr?.message || String(firstErr)
+    const msg2 = err2?.message || String(err2)
+    throw new Error(
+      `Gmail SMTP no disponible. Intento1(${cfg.host}:${cfg.port}, secure=${cfg.secure})=${msg1}; intento2(${cfg.host}:465, secure=true)=${msg2}`
+    )
   }
 }
 
