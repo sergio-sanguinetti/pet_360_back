@@ -64,7 +64,7 @@ app.use(compression());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // límite de 100 requests por IP por ventana de tiempo
+  max: 5000, // límite de 5000 requests por IP por ventana de tiempo (aumentado para evitar bloqueos en frontend)
   message: {
     success: false,
     message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
@@ -180,13 +180,15 @@ initCronJobs();
 
 // Manejo de errores no capturados
 process.on('uncaughtException', (err) => {
-  logger.error('Error no capturado:', err);
-  process.exit(1);
+  logger.error('Error no capturado (uncaughtException):', err);
+  // No llamar process.exit(1) para que el servidor no se caiga
+  // Solo loggear y continuar
 });
 
-process.on('unhandledRejection', (err) => {
-  logger.error('Promesa rechazada no manejada:', err);
-  process.exit(1);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Promesa rechazada no manejada (unhandledRejection):', reason);
+  // No llamar process.exit(1) para que el servidor no se caiga
+  // Solo loggear y continuar
 });
 
 module.exports = app;
