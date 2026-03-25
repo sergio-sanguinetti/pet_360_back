@@ -1,0 +1,21 @@
+name: Deploy Docker App
+
+on:
+  push:
+    branches: [ main ] # Verifica que tu rama se llame main o master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/pet_360_back
+            git pull origin main
+            docker compose up -d --build
+            docker image prune -f
