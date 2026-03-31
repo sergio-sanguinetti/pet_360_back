@@ -17,6 +17,6 @@ COPY . .
 # Generamos el cliente de Prisma manualmente ahora que el archivo schema ya existe
 RUN npx prisma generate
 
-EXPOSE 3000
+EXPOSE 5000
 
 CMD ["npm", "start"]

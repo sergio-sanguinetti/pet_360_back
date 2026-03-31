@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const createSuscripcion = async (req, res) => {
     try {
-        const { clienteId, mascotaId, plan, proximaEntrega, montoBase, recetaNombre, recetaId } = req.body;
+        const { clienteId, mascotaId, plan, proximaEntrega, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, estadoPedido } = req.body;
 
         const suscripcion = await prisma.suscripcion.create({
             data: {
@@ -14,6 +14,9 @@ const createSuscripcion = async (req, res) => {
                 montoBase,
                 recetaNombre: recetaNombre || null,
                 recetaId: recetaId != null ? parseInt(recetaId) : null,
+                cantidadBolsas: cantidadBolsas != null ? parseInt(cantidadBolsas) : 1,
+                gramosPorBolsa: gramosPorBolsa != null ? parseInt(gramosPorBolsa) : 0,
+                estadoPedido: estadoPedido || 'pendiente',
                 estado: 'activa'
             },
         });
@@ -67,7 +70,7 @@ const getSuscripcionById = async (req, res) => {
 
 const updateSuscripcion = async (req, res) => {
     try {
-        const { plan, proximaEntrega, estado, montoBase, recetaNombre, recetaId } = req.body;
+        const { plan, proximaEntrega, estado, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, estadoPedido } = req.body;
 
         const updateData = { plan, estado, montoBase };
         if (recetaNombre !== undefined) updateData.recetaNombre = recetaNombre || null;
@@ -75,6 +78,10 @@ const updateSuscripcion = async (req, res) => {
         if (proximaEntrega) {
             updateData.proximaEntrega = new Date(proximaEntrega);
         }
+
+        if (cantidadBolsas !== undefined) updateData.cantidadBolsas = parseInt(cantidadBolsas);
+        if (gramosPorBolsa !== undefined) updateData.gramosPorBolsa = parseInt(gramosPorBolsa);
+        if (estadoPedido !== undefined) updateData.estadoPedido = estadoPedido;
 
         const suscripcion = await prisma.suscripcion.update({
             where: { id: parseInt(req.params.id) },
