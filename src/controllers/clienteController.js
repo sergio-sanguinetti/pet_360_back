@@ -367,6 +367,7 @@ const agregarMascota = async (req, res) => {
 
         res.json({
             success: true,
+            servidorActualizado: true, // ESTO COMPRUEBA SI PRODUCCION TIENE EL ARCHIVO NUEVO
             message: 'Mascota agregada exitosamente',
             data: resultadoTransaccion
         });
