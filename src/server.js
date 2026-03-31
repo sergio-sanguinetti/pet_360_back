@@ -143,7 +143,7 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'API de Pet 360 - Sistema de Administración Prueba',
+    message: 'API de Pet 360 - Sistema de Administración',
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
