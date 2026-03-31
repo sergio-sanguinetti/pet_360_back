@@ -16,6 +16,7 @@ const createSuscripcion = async (req, res) => {
                 recetaId: recetaId != null ? parseInt(recetaId) : null,
                 cantidadBolsas: cantidadBolsas != null ? parseInt(cantidadBolsas) : 1,
                 gramosPorBolsa: gramosPorBolsa != null ? parseInt(gramosPorBolsa) : 0,
+                resumenBolsas: resumenBolsas || null,
                 estadoPedido: estadoPedido || 'pendiente',
                 estado: 'activa'
             },
@@ -81,6 +82,7 @@ const updateSuscripcion = async (req, res) => {
 
         if (cantidadBolsas !== undefined) updateData.cantidadBolsas = parseInt(cantidadBolsas);
         if (gramosPorBolsa !== undefined) updateData.gramosPorBolsa = parseInt(gramosPorBolsa);
+        if (resumenBolsas !== undefined) updateData.resumenBolsas = resumenBolsas;
         if (estadoPedido !== undefined) updateData.estadoPedido = estadoPedido;
 
         const suscripcion = await prisma.suscripcion.update({

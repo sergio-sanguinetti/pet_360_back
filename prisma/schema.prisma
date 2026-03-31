@@ -283,6 +283,7 @@ model Suscripcion {
   // Detalle de pedido/entrega
   cantidadBolsas   Int?     @default(1)
   gramosPorBolsa   Int?     @default(0)
+  resumenBolsas    String?  // Ej: "1 bolsa de 500g, 1 bolsa de 200g"
   estadoPedido     String?  @default("pendiente") // "pendiente", "en preparacion", "entregado"
 
   createdAt        DateTime @default(now())
@@ -372,4 +373,23 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@map("push_subscriptions")
+}
+
+model Pago {
+  id              Int      @id @default(autoincrement())
+  preferenceId    String?  @unique
+  paymentId       String?  @unique
+  externalRef     String?  @unique
+  monto           Float
+  estado          String   @default("pending") // pending, approved, rejected
+  metodo          String?  // visa, mastercard, etc.
+  clienteId       Int?
+  mascotaId       Int?
+  suscripcionData String?  @db.Text // JSON stringificado con detalles de la suscripción a crear
+  procesado       Boolean  @default(false) // Si ya se creó la suscripción asociada
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("pagos")
 }
