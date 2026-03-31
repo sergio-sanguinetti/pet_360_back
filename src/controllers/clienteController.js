@@ -348,14 +348,19 @@ const agregarMascota = async (req, res) => {
                 });
             }
 
-            // 3. Incrementar el contador de mascotas del cliente y marcar wizard completo
+            // 3. Obtener el cliente actual para asegurarnos de que mascotas no sea nulo (lo que causaba problemas)
+            const clienteActual = await tx.cliente.findUnique({ where: { id: parseInt(clienteId) } });
+            const numeroMascotas = clienteActual.mascotas || 0;
+
+            // 4. Actualizar el contador de mascotas del cliente y marcar wizard completo
             await tx.cliente.update({
                 where: { id: parseInt(clienteId) },
                 data: {
                     wizardCompletado: true,
-                    mascotas: { increment: 1 }
+                    mascotas: numeroMascotas + 1
                 }
             });
+            console.log(`[PRODUCCION VERIFICACION] Mascota agregada y wizardCompletado forzado a TRUE para cliente: ${clienteId}`);
 
             return { mascota: nuevaMascota, suscripcion: nuevaSuscripcion };
         });
