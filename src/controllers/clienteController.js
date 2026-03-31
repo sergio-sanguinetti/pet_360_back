@@ -348,10 +348,11 @@ const agregarMascota = async (req, res) => {
                 });
             }
 
-            // 3. Incrementar el contador de mascotas del cliente
+            // 3. Incrementar el contador de mascotas del cliente y marcar wizard completo
             await tx.cliente.update({
                 where: { id: parseInt(clienteId) },
                 data: {
+                    wizardCompletado: true,
                     mascotas: { increment: 1 }
                 }
             });
