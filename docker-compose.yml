@@ -23,6 +23,8 @@ services:
       - DATABASE_URL=mysql://root:AvrBOIR0Pk@db:3306/u719040383_pet_360
     depends_on:
       - db
+    volumes:
+      - ./uploads:/app/uploads
 
   phpmyadmin:
     image: phpmyadmin:latest
