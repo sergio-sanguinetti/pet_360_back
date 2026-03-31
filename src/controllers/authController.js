@@ -265,7 +265,11 @@ const loginCliente = async (req, res) => {
 
     const { email, password } = req.body;
 
-    const cliente = await prisma.cliente.findUnique({ where: { email } });
+    let cliente = await prisma.cliente.findUnique({ 
+      where: { email },
+      include: { mascotasDetalle: true }
+    });
+
     if (!cliente || !cliente.password) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas o cuenta sin contraseña' });
     }
@@ -277,6 +281,15 @@ const loginCliente = async (req, res) => {
     const passwordValida = await bcrypt.compare(password, cliente.password);
     if (!passwordValida) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+    }
+
+    // Fix pre-existing users that have pets but wizardCompletado is false
+    if (!cliente.wizardCompletado && cliente.mascotasDetalle && cliente.mascotasDetalle.length > 0) {
+      cliente = await prisma.cliente.update({
+        where: { id: cliente.id },
+        data: { wizardCompletado: true },
+        include: { mascotasDetalle: true }
+      });
     }
 
     const token = jwt.sign(
@@ -310,7 +323,10 @@ const googleLoginCliente = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
 
-    let cliente = await prisma.cliente.findUnique({ where: { email } });
+    let cliente = await prisma.cliente.findFirst({ 
+      where: { email },
+      include: { mascotasDetalle: true }
+    });
 
     if (!cliente) {
       // Crear nuevo cliente si no existe
@@ -326,6 +342,15 @@ const googleLoginCliente = async (req, res) => {
 
     if (cliente.status !== 'activo') {
       return res.status(401).json({ success: false, message: 'Cuenta inactiva. Contacta soporte.' });
+    }
+
+    // Fix pre-existing users that have pets but wizardCompletado is false
+    if (!cliente.wizardCompletado && cliente.mascotasDetalle && cliente.mascotasDetalle.length > 0) {
+      cliente = await prisma.cliente.update({
+        where: { id: cliente.id },
+        data: { wizardCompletado: true },
+        include: { mascotasDetalle: true }
+      });
     }
 
     const token = jwt.sign(
