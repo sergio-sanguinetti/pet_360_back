@@ -71,9 +71,13 @@ const getSuscripcionById = async (req, res) => {
 
 const updateSuscripcion = async (req, res) => {
     try {
-        const { plan, proximaEntrega, estado, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, estadoPedido } = req.body;
+        const { plan, proximaEntrega, estado, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, resumenBolsas, estadoPedido } = req.body;
 
-        const updateData = { plan, estado, montoBase };
+        const updateData = {};
+        if (plan) updateData.plan = plan;
+        if (estado) updateData.estado = estado;
+        if (montoBase !== undefined) updateData.montoBase = montoBase;
+        
         if (recetaNombre !== undefined) updateData.recetaNombre = recetaNombre || null;
         if (recetaId !== undefined) updateData.recetaId = recetaId != null ? parseInt(recetaId) : null;
         if (proximaEntrega) {
