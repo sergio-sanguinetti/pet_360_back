@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,112 +21,104 @@ model Usuario {
 }
 
 model Cliente {
-  id           Int      @id @default(autoincrement())
-  nombre       String
-  email        String   @unique
-  password     String?
-  telefono     String?
-  distrito     String?
-  mascotas     Int      @default(0)
-  wizardCompletado Boolean @default(false)
-  status       String   @default("activo") // activo, pausado, sin_suscripcion
-  ultimaCompra DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  mascotasDetalle Mascota[]
-  suscripciones   Suscripcion[]
-  pushSubscriptions PushSubscription[]
+  id                  Int                  @id @default(autoincrement())
+  nombre              String
+  email               String               @unique
+  telefono            String?
+  distrito            String?
+  mascotas            Int                  @default(0)
+  status              String               @default("activo")
+  ultimaCompra        DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  password            String?
+  wizardCompletado    Boolean              @default(false)
+  mascotasDetalle     Mascota[]
   passwordResetTokens PasswordResetToken[]
+  pushSubscriptions   PushSubscription[]
+  suscripciones       Suscripcion[]
 
   @@map("clientes")
 }
 
 model PasswordResetToken {
-  id Int @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   clienteId Int
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  // Guardamos un hash del token para no guardar el token en texto plano.
-  tokenHash String @unique
-
+  tokenHash String    @unique
   expiresAt DateTime
-  used Boolean @default(false)
-  usedAt DateTime?
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  cliente   Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-
+  @@index([clienteId], map: "password_reset_tokens_clienteId_fkey")
   @@map("password_reset_tokens")
 }
 
 model Mascota {
-  id             Int      @id @default(autoincrement())
-  nombre         String
-  especie        String   // Perro, Gato
-  raza           String?
-  sexo           String?
-  castrado       Boolean  @default(false)
-  actividad      String?  @default("activo")
-  edad           String?
-  pesoKg         Float?
-  condicion      String?
-  objetivo       String?  @default("Normal")
-  alergiasMascota String? @db.Text
-  vacunasMascota  String? @db.Text
-  tratamientosMascota String? @db.Text
-  clienteId      Int
-  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  vacunasAlDia   Boolean  @default(false)
-  ultimaRevision String?  @default("—")
-  proximaDosis   String?  @default("—")
-  foto           String?  @db.LongText
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  Int             @id @default(autoincrement())
+  nombre              String
+  especie             String
+  raza                String?
+  edad                String?
+  pesoKg              Float?
+  clienteId           Int
+  vacunasAlDia        Boolean         @default(false)
+  ultimaRevision      String?         @default("—")
+  proximaDosis        String?         @default("—")
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  razaId              Int?
+  actividad           String?         @default("activo")
+  alergiasMascota     String?         @db.Text
+  castrado            Boolean         @default(false)
+  condicion           String?
+  sexo                String?
+  tratamientosMascota String?         @db.Text
+  vacunasMascota      String?         @db.Text
+  objetivo            String?         @default("Normal")
+  foto                String?         @db.LongText
+  historialPesos      HistorialPeso[]
+  cliente             Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  razaRel             Raza?           @relation(fields: [razaId], references: [id])
+  suscripciones       Suscripcion[]
 
-  razaId         Int?
-  razaRel        Raza?    @relation(fields: [razaId], references: [id])
-  suscripciones  Suscripcion[]
-  historialPesos HistorialPeso[]
-
+  @@index([clienteId], map: "mascotas_clienteId_fkey")
+  @@index([razaId], map: "mascotas_razaId_fkey")
   @@map("mascotas")
 }
 
 model Raza {
-  id           Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   nombre        String
   promedioVida  Float?
   promedioPeso  Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   categoria     String?
   umbralMadurez Float?
   mascotas      Mascota[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
   @@map("razas")
 }
 
 model Configuracion {
-  id                Int      @id @default(autoincrement())
-
-  // Info General
-  razonSocial       String?
-  nombreComercial   String?
-  ruc               String?
-  direccionFiscal   String?
-  departamento      String?
-  telefono          String?
-  email             String?
-
-  // Boleta
-  serieBoleta       String?
-  numeroSiguiente   Int      @default(1)
-  encabezadoBoleta  String?
-  direccionBoleta   String?
-  leyendaSunat      String?
-// Landing Page
-  landingBannerUrl  String?  @db.Text
-  landingBannerActivo Boolean @default(false)
-
-  updatedAt         DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  razonSocial         String?
+  nombreComercial     String?
+  ruc                 String?
+  direccionFiscal     String?
+  departamento        String?
+  telefono            String?
+  email               String?
+  serieBoleta         String?
+  numeroSiguiente     Int      @default(1)
+  encabezadoBoleta    String?
+  direccionBoleta     String?
+  leyendaSunat        String?
+  updatedAt           DateTime @updatedAt
+  landingBannerActivo Boolean  @default(false)
+  landingBannerUrl    String?  @db.Text
 
   @@map("configuracion")
 }
@@ -140,9 +129,8 @@ model Producto {
   descripcion    String?
   imagenUrl      String?
   precioUnitario Float    @default(0)
-  cantidad       Float    @default(0) // Float because unit can be kg/g/l/ml
-  unidad         String   @default("unidad") // kg, g, l, ml, unidad
-  
+  cantidad       Float    @default(0)
+  unidad         String   @default("unidad")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -150,82 +138,78 @@ model Producto {
 }
 
 model Receta {
-  id               Int       @id @default(autoincrement())
+  id               Int                 @id @default(autoincrement())
   nombre           String
-  precio           Float     @default(0) // Costo o precio por receta
-  
-  imagen           String?   @db.Text
-  descripcionCorta String?   @db.Text
-  descripcionLarga String?   @db.Text
-  indicacionMedica String?   @db.Text
-  formula          String?   @db.Text
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  
-  ingredientes   RecetaIngrediente[]
-  precios        RecetaPrecio[]
-  etiquetas      RecetaEtiqueta[]
-  beneficios     RecetaBeneficio[]
+  precio           Float               @default(0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  descripcionCorta String?             @db.Text
+  descripcionLarga String?             @db.Text
+  formula          String?             @db.Text
+  imagen           String?             @db.Text
+  indicacionMedica String?             @db.Text
+  beneficios       RecetaBeneficio[]
+  etiquetas        RecetaEtiqueta[]
+  ingredientes     RecetaIngrediente[]
+  precios          RecetaPrecio[]
 
   @@map("recetas")
 }
 
 model RecetaIngrediente {
-  id           Int      @id @default(autoincrement())
-  recetaId     Int
-  categoria    String   // "Proteina 60%", "Carbohidrato 25%", etc.
-  insumo       String   // "Pollo", etc.
-  cantidad     String   // "400 gr", etc.
-  
-  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  id        Int    @id @default(autoincrement())
+  recetaId  Int
+  categoria String
+  insumo    String
+  cantidad  String
+  receta    Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
 
+  @@index([recetaId], map: "receta_ingredientes_recetaId_fkey")
   @@map("receta_ingredientes")
 }
 
 model RecetaPrecio {
-  id           Int      @id @default(autoincrement())
-  recetaId     Int
-  sku          String
-  precioBolsa  Float
-  precioPlan   Float
-  
-  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  recetaId    Int
+  sku         String
+  precioBolsa Float
+  precioPlan  Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  receta      Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  @@index([recetaId], map: "receta_precios_recetaId_fkey")
   @@map("receta_precios")
 }
 
 model RecetaEtiqueta {
-  id           Int      @id @default(autoincrement())
-  recetaId     Int
-  nombre       String
-  icono        String
-  
-  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  id       Int    @id @default(autoincrement())
+  recetaId Int
+  nombre   String
+  icono    String
+  receta   Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
 
+  @@index([recetaId], map: "receta_etiquetas_recetaId_fkey")
   @@map("receta_etiquetas")
 }
 
 model RecetaBeneficio {
-  id           Int      @id @default(autoincrement())
-  recetaId     Int
-  titulo       String
-  descripcion  String   @db.Text
-  icono        String
-  
-  receta       Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  id          Int    @id @default(autoincrement())
+  recetaId    Int
+  titulo      String
+  descripcion String @db.Text
+  icono       String
+  receta      Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
 
+  @@index([recetaId], map: "receta_beneficios_recetaId_fkey")
   @@map("receta_beneficios")
 }
 
 model Antipulga {
   id           Int      @id @default(autoincrement())
-  tipo         String   
-  nombre       String   
-  frecuencia   String   
+  tipo         String
+  nombre       String
+  frecuencia   String
   marcas       String   @db.Text
   notificacion String   @db.Text
   createdAt    DateTime @default(now())
@@ -236,7 +220,7 @@ model Antipulga {
 
 model Notificacion {
   id          Int      @id @default(autoincrement())
-  nombre      String   
+  nombre      String
   mensaje     String   @db.Text
   vencimiento DateTime
   createdAt   DateTime @default(now())
@@ -247,7 +231,7 @@ model Notificacion {
 
 model Alergia {
   id          Int      @id @default(autoincrement())
-  alergia     String   
+  alergia     String
   descripcion String   @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -257,50 +241,49 @@ model Alergia {
 
 model Vacuna {
   id          Int      @id @default(autoincrement())
-  nombre      String   
-  descripcion String?  @db.Text
-  recurrente  Boolean  @default(false)
-  frecuencia  String?  @db.Text
+  nombre      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  descripcion String?  @db.Text
+  frecuencia  String?  @db.Text
+  recurrente  Boolean  @default(false)
 
   @@map("vacunas")
 }
 
 model Suscripcion {
-  id               Int      @id @default(autoincrement())
-  clienteId        Int
-  cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  mascotaId        Int?
-  mascota          Mascota? @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
-  plan             String   // "semanal", "quincenal", "mensual"
-  proximaEntrega   DateTime
-  estado           String   @default("activa") // "activa", "pausada", "cancelada"
-  montoBase        Float    @default(0)
-  recetaNombre     String?  // nombre de la receta asociada (ej: POLLO VITAL, Cordero)
-  recetaId         Int?     // id de receta en catálogo si aplica
-  
-  // Detalle de pedido/entrega
-  cantidadBolsas   Int?     @default(1)
-  gramosPorBolsa   Int?     @default(0)
-  resumenBolsas    String?  // Ej: "1 bolsa de 500g, 1 bolsa de 200g"
-  estadoPedido     String?  @default("pendiente") // "pendiente", "en preparacion", "entregado"
+  id             Int      @id @default(autoincrement())
+  clienteId      Int
+  mascotaId      Int?
+  plan           String
+  proximaEntrega DateTime
+  estado         String   @default("activa")
+  montoBase      Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  recetaId       Int?
+  recetaNombre   String?
+  cantidadBolsas Int?     @default(1)
+  estadoPedido   String?  @default("pendiente")
+  gramosPorBolsa Int?     @default(0)
+  resumenBolsas  String?
+  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  mascota        Mascota? @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
+  @@index([clienteId], map: "suscripciones_clienteId_fkey")
+  @@index([mascotaId], map: "suscripciones_mascotaId_fkey")
   @@map("suscripciones")
 }
 
 model HistorialPeso {
-  id          Int      @id @default(autoincrement())
-  mascotaId   Int
-  pesoKg      Float
-  nota        String?
-  fecha       DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  mascotaId Int
+  pesoKg    Float
+  nota      String?
+  fecha     DateTime @default(now())
+  mascota   Mascota  @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
 
-  mascota     Mascota  @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
-
+  @@index([mascotaId], map: "historial_peso_mascotaId_fkey")
   @@map("historial_peso")
 }
 
@@ -310,10 +293,10 @@ model Descuento {
   fechaInicio DateTime
   fechaFin    DateTime
   porcentaje  Float
-  tipoCliente String   @default("nuevo_cliente") // "nuevo_cliente" | "cliente_recurrente"
-  activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  activo      Boolean  @default(true)
+  tipoCliente String   @default("nuevo_cliente")
 
   @@map("descuentos")
 }
@@ -332,8 +315,8 @@ model Recomendacion {
   id          Int      @id @default(autoincrement())
   titulo      String
   descripcion String   @db.Text
-  categoria   String   @default("General") // Actividad, Salud, Nutricion, General
-  icono       String   @default("star")     // Material Symbols icon name
+  categoria   String   @default("General")
+  icono       String   @default("star")
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -342,23 +325,22 @@ model Recomendacion {
 }
 
 model ZonaEnvio {
-  id          Int      @id @default(autoincrement())
-  distrito    String   @unique
-  costo       Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  distrito  String   @unique
+  costo     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("zonas_envio")
 }
 
 model CondicionCorporal {
   id          Int      @id @default(autoincrement())
-  nombre      String   @unique  // "Delgado", "Ideal", "Sobrepeso"
-  descripcion String   @db.Text // descripción visible en el wizard
-  mensaje     String?  @db.Text // aviso médico (ej: "Detectamos sobrepeso...")
+  nombre      String   @unique
+  descripcion String   @db.Text
+  mensaje     String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
 
   @@map("condiciones_corporales")
 }
@@ -366,12 +348,13 @@ model CondicionCorporal {
 model PushSubscription {
   id        Int      @id @default(autoincrement())
   clienteId Int
-  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   endpoint  String   @db.Text
   p256dh    String   @db.Text
   auth      String   @db.Text
   createdAt DateTime @default(now())
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
+  @@index([clienteId], map: "push_subscriptions_clienteId_fkey")
   @@map("push_subscriptions")
 }
 
@@ -381,13 +364,12 @@ model Pago {
   paymentId       String?  @unique
   externalRef     String?  @unique
   monto           Float
-  estado          String   @default("pending") // pending, approved, rejected
-  metodo          String?  // visa, mastercard, etc.
+  estado          String   @default("pending")
+  metodo          String?
   clienteId       Int?
   mascotaId       Int?
-  suscripcionData String?  @db.Text // JSON stringificado con detalles de la suscripción a crear
-  procesado       Boolean  @default(false) // Si ya se creó la suscripción asociada
-
+  suscripcionData String?  @db.Text
+  procesado       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
