@@ -261,7 +261,7 @@ const completarWizard = async (req, res) => {
                         estado: 'activa',
                         montoBase: parseFloat(suscripcionData.montoBase || 0),
                         recetaNombre: suscripcionData.recetaNombre || null,
-                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
+                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null, cantidadBolsas: suscripcionData.cantidadBolsas != null ? parseInt(suscripcionData.cantidadBolsas) : 1, gramosPorBolsa: suscripcionData.gramosPorBolsa != null ? parseInt(suscripcionData.gramosPorBolsa) : 0, resumenBolsas: suscripcionData.resumenBolsas || null
                     }
                 });
             }
@@ -343,7 +343,7 @@ const agregarMascota = async (req, res) => {
                         estado: 'activa',
                         montoBase: parseFloat(suscripcionData.montoBase || 0),
                         recetaNombre: suscripcionData.recetaNombre || null,
-                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null
+                        recetaId: suscripcionData.recetaId != null ? parseInt(suscripcionData.recetaId) : null, cantidadBolsas: suscripcionData.cantidadBolsas != null ? parseInt(suscripcionData.cantidadBolsas) : 1, gramosPorBolsa: suscripcionData.gramosPorBolsa != null ? parseInt(suscripcionData.gramosPorBolsa) : 0, resumenBolsas: suscripcionData.resumenBolsas || null
                     }
                 });
             }

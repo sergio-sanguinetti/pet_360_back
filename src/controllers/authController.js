@@ -298,7 +298,7 @@ const loginCliente = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.json({ success: true, message: 'Login cliente exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: cliente.wizardCompletado }, token } });
+    res.json({ success: true, message: 'Login cliente exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: Boolean(cliente.wizardCompletado) }, token } });
   } catch (error) {
     console.error('Error en login cliente:', error);
     res.status(500).json({ success: false, message: 'Error al iniciar sesión', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
@@ -359,7 +359,7 @@ const googleLoginCliente = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.json({ success: true, message: 'Login con Google exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: cliente.wizardCompletado }, token } });
+    res.json({ success: true, message: 'Login con Google exitoso', data: { cliente: { id: cliente.id, email: cliente.email, nombre: cliente.nombre, rol: 'cliente', wizardCompletado: Boolean(cliente.wizardCompletado) }, token } });
   } catch (error) {
     console.error('Error en login con Google:', error);
     res.status(500).json({ success: false, message: 'Error al iniciar sesión con Google', error: process.env.NODE_ENV === 'development' ? error.message : undefined });

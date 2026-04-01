@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const createSuscripcion = async (req, res) => {
     try {
-        const { clienteId, mascotaId, plan, proximaEntrega, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, estadoPedido } = req.body;
+        const { clienteId, mascotaId, plan, proximaEntrega, montoBase, recetaNombre, recetaId, cantidadBolsas, gramosPorBolsa, resumenBolsas, estadoPedido } = req.body;
 
         const suscripcion = await prisma.suscripcion.create({
             data: {
