@@ -198,6 +198,8 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
                 cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
                 gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
                 resumenBolsas: sd.resumenBolsas || null,
+                direccionEnvio: sd.direccionEnvio || null,
+                distritoEnvio: sd.distritoEnvio || null,
                 estadoPedido: 'pendiente',
                 estado: 'activa'
               }
