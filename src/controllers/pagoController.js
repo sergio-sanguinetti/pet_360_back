@@ -51,7 +51,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           title,
           quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
           currency_id: 'PEN',
-          unit_price
+          unit_price: parseFloat(unit_price.toFixed(2))
         }
       ],
       external_reference: external_reference || `REF-${Date.now()}`,
@@ -61,7 +61,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
         pending: pendingUrl
       },
       auto_return: 'approved',
-      notification_url: webhookUrl || null
+      notification_url: (mpEnv !== 'test' && webhookUrl) ? webhookUrl : undefined
     };
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
