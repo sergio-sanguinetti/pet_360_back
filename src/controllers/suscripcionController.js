@@ -31,13 +31,10 @@ const createSuscripcion = async (req, res) => {
 
 const getSuscripciones = async (req, res) => {
     try {
-        const { mascotaId, clienteId } = req.query;
+        const { mascotaId } = req.query;
         const where = {};
         if (mascotaId !== undefined && mascotaId !== '') {
             where.mascotaId = parseInt(mascotaId);
-        }
-        if (clienteId !== undefined && clienteId !== '') {
-            where.clienteId = parseInt(clienteId);
         }
         const suscripciones = await prisma.suscripcion.findMany({
             where,
