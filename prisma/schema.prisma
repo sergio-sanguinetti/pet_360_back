@@ -266,7 +266,8 @@ model Suscripcion {
   cantidadBolsas Int?     @default(1)
   estadoPedido   String?  @default("pendiente")
   gramosPorBolsa Int?     @default(0)
-  resumenBolsas  String?
+  direccionEnvio String?
+  distritoEnvio  String?
   cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   mascota        Mascota? @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
 

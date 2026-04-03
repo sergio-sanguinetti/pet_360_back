@@ -97,7 +97,11 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           estado: 'pending',
           clienteId: clienteId ? parseInt(clienteId) : null,
           mascotaId: mascotaId ? parseInt(mascotaId) : null,
-          suscripcionData: suscripcionData ? JSON.stringify(suscripcionData) : null
+          suscripcionData: suscripcionData ? JSON.stringify({
+            ...suscripcionData,
+            direccion: req.body.direccion || null,
+            distrito: req.body.distrito || null
+          }) : null
         }
       });
     } catch (dbErr) {
@@ -198,6 +202,8 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
                 cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
                 gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
                 resumenBolsas: sd.resumenBolsas || null,
+                direccionEnvio: sd.direccion || null,
+                distritoEnvio: sd.distrito || null,
                 estadoPedido: 'pendiente',
                 estado: 'activa'
               }
