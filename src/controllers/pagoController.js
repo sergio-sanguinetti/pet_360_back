@@ -6,21 +6,16 @@ const logger = require('../utils/logger');
  */
 const crearPreferenciaMercadoPago = async (req, res, next) => {
   try {
-    // Seleccionar credenciales según entorno (test o producción)
-    const mpEnv = (process.env.MP_ENV || process.env.MERCADOPAGO_MODE || 'test').toLowerCase();
-    
-    // Selección robusta del token: si el del entorno configurado está vacío, usar el de test
-    let accessToken =
-      (mpEnv === 'prod' && process.env.MERCADOPAGO_ACCESS_TOKEN_PROD)
-        ? process.env.MERCADOPAGO_ACCESS_TOKEN_PROD
-        : (process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || process.env.MERCADOPAGO_ACCESS_TOKEN || '');
+    // Token de MercadoPago: siempre usar MERCADOPAGO_ACCESS_TOKEN_TEST
+    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '';
+    const mpEnv = 'test';
 
-    logger.info(`[MP] Entorno: ${mpEnv}, token presente: ${accessToken ? 'SI ('+accessToken.substring(0,15)+'...)' : 'NO'}`);
+    logger.info(`[MP] Token presente: ${accessToken ? 'SI (' + accessToken.substring(0, 15) + '...)' : 'NO'}`);
 
     if (!accessToken) {
       return res.status(500).json({
         success: false,
-        message: 'No hay ACCESS TOKEN de MercadoPago configurado. Revisa las variables MERCADOPAGO_ACCESS_TOKEN[_TEST/_PROD].'
+        message: 'No hay ACCESS TOKEN de MercadoPago configurado. Revisa la variable MERCADOPAGO_ACCESS_TOKEN_TEST.'
       });
     }
 
@@ -152,14 +147,8 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
       const paymentId = resourceId;
       logger.info(`Notificación de pago recibida: ${paymentId}`);
 
-      // 1. Obtener detalles del pago desde MercadoPago API
-      const mpEnv = (process.env.MP_ENV || process.env.MERCADOPAGO_MODE || 'test').toLowerCase();
-      let accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-      if (mpEnv === 'test' && process.env.MERCADOPAGO_ACCESS_TOKEN_TEST) {
-        accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST;
-      } else if (mpEnv === 'prod' && process.env.MERCADOPAGO_ACCESS_TOKEN_PROD) {
-        accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_PROD;
-      }
+      // Token de MercadoPago: siempre usar MERCADOPAGO_ACCESS_TOKEN_TEST
+      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '';
 
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
