@@ -8,13 +8,14 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
   try {
     // Seleccionar credenciales según entorno (test o producción)
     const mpEnv = (process.env.MP_ENV || process.env.MERCADOPAGO_MODE || 'test').toLowerCase();
-    let accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    
+    // Selección robusta del token: si el del entorno configurado está vacío, usar el de test
+    let accessToken =
+      (mpEnv === 'prod' && process.env.MERCADOPAGO_ACCESS_TOKEN_PROD)
+        ? process.env.MERCADOPAGO_ACCESS_TOKEN_PROD
+        : (process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || process.env.MERCADOPAGO_ACCESS_TOKEN || '');
 
-    if (mpEnv === 'test' && process.env.MERCADOPAGO_ACCESS_TOKEN_TEST) {
-      accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST;
-    } else if (mpEnv === 'prod' && process.env.MERCADOPAGO_ACCESS_TOKEN_PROD) {
-      accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_PROD;
-    }
+    logger.info(`[MP] Entorno: ${mpEnv}, token presente: ${accessToken ? 'SI ('+accessToken.substring(0,15)+'...)' : 'NO'}`);
 
     if (!accessToken) {
       return res.status(500).json({
