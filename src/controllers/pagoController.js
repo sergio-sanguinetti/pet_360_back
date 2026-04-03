@@ -43,15 +43,24 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
     const successUrl = process.env.MP_SUCCESS_URL || 'http://localhost:3001/confirmacion-pago-exitoso';
     const failureUrl = process.env.MP_FAILURE_URL || 'http://localhost:3001/pago-logistica?status=failure';
     const pendingUrl = process.env.MP_PENDING_URL || 'http://localhost:3001/pago-logistica?status=pending';
-    const webhookUrl = process.env.MP_WEBHOOK_URL; // URL pública de tu backend
+    const webhookUrl = process.env.MP_WEBHOOK_URL;
+
+    // Sanitizar title: máx 256 chars, sin caracteres especiales problemáticos
+    const safeTitle = String(title).substring(0, 256).replace(/[<>"]/g, '');
+    const safePrice = parseFloat(Number(unit_price).toFixed(2));
+    const safeQty = Number.isFinite(quantity) && quantity > 0 ? Number(quantity) : 1;
+
+    // En modo test nunca enviamos notification_url ni auto_return
+    // (ambos pueden causar "policy UNAUTHORIZED" si MP no puede validarlos)
+    const isTest = mpEnv === 'test' || mpEnv === 'sandbox';
 
     const body = {
       items: [
         {
-          title,
-          quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+          title: safeTitle,
+          quantity: safeQty,
           currency_id: 'PEN',
-          unit_price: parseFloat(unit_price.toFixed(2))
+          unit_price: safePrice
         }
       ],
       external_reference: external_reference || `REF-${Date.now()}`,
@@ -60,9 +69,13 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
         failure: failureUrl,
         pending: pendingUrl
       },
-      auto_return: 'approved',
-      notification_url: (mpEnv !== 'test' && webhookUrl) ? webhookUrl : undefined
+      // auto_return SÓLO en producción y con dominios aprobados en la cuenta MP
+      ...(isTest ? {} : { auto_return: 'approved' }),
+      // notification_url SÓLO en producción
+      ...(!isTest && webhookUrl ? { notification_url: webhookUrl } : {})
     };
+
+    logger.info('[MP] Creando preferencia', { mpEnv, isTest, safePrice, safeTitle, body: JSON.stringify(body) });
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
@@ -76,15 +89,21 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
     const data = await response.json();
 
     if (!response.ok) {
-      logger.error('Error al crear preferencia de MercadoPago', {
-        status: response.status,
-        data
+      logger.error('[MP] Error al crear preferencia', {
+        httpStatus: response.status,
+        mpError: JSON.stringify(data)
       });
 
-      const error = new Error(data?.message || data?.error || 'Error al crear la preferencia de pago.');
-      error.status = response.status || 500;
-      throw error;
+      // Propagamos el mensaje de MP directamente para debuggear
+      const errorMsg = data?.message || data?.error || data?.cause?.map?.(c => c.description).join(', ') || 'Error al crear la preferencia de pago.';
+      return res.status(response.status || 500).json({
+        success: false,
+        message: errorMsg,
+        error: JSON.stringify(data)
+      });
     }
+
+    logger.info('[MP] Preferencia creada OK', { prefId: data.id });
 
     // Guardar referencia en la tabla de pagos para el webhook
     const prisma = require('../config/prisma');
@@ -93,7 +112,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
         data: {
           preferenceId: data.id,
           externalRef: body.external_reference,
-          monto: unit_price * quantity,
+          monto: safePrice * safeQty,
           estado: 'pending',
           clienteId: clienteId ? parseInt(clienteId) : null,
           mascotaId: mascotaId ? parseInt(mascotaId) : null,
@@ -101,8 +120,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
         }
       });
     } catch (dbErr) {
-      logger.error('Error al guardar registro de pago inicial', dbErr);
-      // No bloqueamos el flujo, el ID ya se generó en MP
+      logger.error('[MP] Error al guardar registro de pago inicial', dbErr);
     }
 
     return res.json({
