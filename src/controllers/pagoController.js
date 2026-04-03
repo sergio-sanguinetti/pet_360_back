@@ -200,6 +200,7 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
                 resumenBolsas: sd.resumenBolsas || null,
                 direccionEnvio: sd.direccionEnvio || null,
                 distritoEnvio: sd.distritoEnvio || null,
+                horarioEntrega: sd.horarioEntrega || null,
                 estadoPedido: 'pendiente',
                 estado: 'activa'
               }

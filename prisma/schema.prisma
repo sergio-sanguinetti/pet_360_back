@@ -269,6 +269,7 @@ model Suscripcion {
   resumenBolsas  String?
   direccionEnvio String?
   distritoEnvio  String?
+  horarioEntrega String?
   cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   mascota        Mascota? @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
 
