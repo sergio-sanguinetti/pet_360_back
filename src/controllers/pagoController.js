@@ -30,6 +30,8 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       external_reference,
       clienteId,
       mascotaId,
+      direccion,
+      distrito,
       suscripcionData // Objeto con plan, recetaNombre, cantidadBolsas, etc.
     } = req.body || {};
 
@@ -51,7 +53,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           title,
           quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
           currency_id: 'PEN',
-          unit_price
+          unit_price: Number(Number(unit_price).toFixed(2))
         }
       ],
       external_reference: external_reference || `REF-${Date.now()}`,
