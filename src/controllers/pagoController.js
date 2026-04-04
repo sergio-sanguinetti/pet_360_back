@@ -6,16 +6,17 @@ const logger = require('../utils/logger');
  */
 const crearPreferenciaMercadoPago = async (req, res, next) => {
   try {
-    // Token de MercadoPago: siempre usar MERCADOPAGO_ACCESS_TOKEN_TEST
-    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '';
-    const mpEnv = 'test';
+    const mpEnv = (process.env.MP_ENV || 'test').toLowerCase();
+    const accessToken = mpEnv === 'prod'
+      ? (process.env.MERCADOPAGO_ACCESS_TOKEN_PROD || '')
+      : (process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '');
 
-    logger.info(`[MP] Token presente: ${accessToken ? 'SI (' + accessToken.substring(0, 15) + '...)' : 'NO'}`);
+    logger.info(`[MP] Modo: ${mpEnv} | Token presente: ${accessToken ? 'SI (' + accessToken.substring(0, 15) + '...)' : 'NO'}`);
 
     if (!accessToken) {
       return res.status(500).json({
         success: false,
-        message: 'No hay ACCESS TOKEN de MercadoPago configurado. Revisa la variable MERCADOPAGO_ACCESS_TOKEN_TEST.'
+        message: `No hay ACCESS TOKEN de MercadoPago configurado para modo ${mpEnv}. Revisa MERCADOPAGO_ACCESS_TOKEN_${mpEnv === 'prod' ? 'PROD' : 'TEST'}.`
       });
     }
 
@@ -60,19 +61,15 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           unit_price: safePrice
         }
       ],
+      ...(payerEmail ? { payer: { email: payerEmail } } : {}),
       external_reference: external_reference || `REF-${Date.now()}`,
       back_urls: {
         success: successUrl,
         failure: failureUrl,
         pending: pendingUrl
       },
-      // En producción: payer.email del usuario real, en test NO se envía
-      // (en test, si el email == email del seller, MP da fatal error)
-      ...(!isTest && payerEmail ? { payer: { email: payerEmail } } : {}),
-      // auto_return SÓLO en producción
-      ...(isTest ? {} : { auto_return: 'approved' }),
-      // notification_url SÓLO en producción
-      ...(!isTest && webhookUrl ? { notification_url: webhookUrl } : {})
+      binary_mode: true,
+      ...(webhookUrl ? { notification_url: webhookUrl } : {})
     };
 
     logger.info('[MP] Creando preferencia', { mpEnv, isTest, safePrice, safeTitle, body: JSON.stringify(body) });
@@ -151,8 +148,10 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
       const paymentId = resourceId;
       logger.info(`Notificación de pago recibida: ${paymentId}`);
 
-      // Token de MercadoPago: siempre usar MERCADOPAGO_ACCESS_TOKEN_TEST
-      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '';
+      const whMpEnv = (process.env.MP_ENV || 'test').toLowerCase();
+      const accessToken = whMpEnv === 'prod'
+        ? (process.env.MERCADOPAGO_ACCESS_TOKEN_PROD || '')
+        : (process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '');
 
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
