@@ -26,6 +26,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       external_reference,
       clienteId,
       mascotaId,
+      payerEmail,
       suscripcionData // Objeto con plan, recetaNombre, cantidadBolsas, etc.
     } = req.body || {};
 
@@ -65,7 +66,10 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
         failure: failureUrl,
         pending: pendingUrl
       },
-      // auto_return SÓLO en producción y con dominios aprobados en la cuenta MP
+      // En producción: payer.email del usuario real, en test NO se envía
+      // (en test, si el email == email del seller, MP da fatal error)
+      ...(!isTest && payerEmail ? { payer: { email: payerEmail } } : {}),
+      // auto_return SÓLO en producción
       ...(isTest ? {} : { auto_return: 'approved' }),
       // notification_url SÓLO en producción
       ...(!isTest && webhookUrl ? { notification_url: webhookUrl } : {})
