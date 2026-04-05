@@ -234,8 +234,117 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
   }
 };
 
+/**
+ * Verifica un pago con la API de MercadoPago usando el payment_id
+ * que llega en los query params de la URL de retorno.
+ * Si el pago está aprobado y no fue procesado, crea la suscripción.
+ */
+const verificarPagoMercadoPago = async (req, res, next) => {
+  try {
+    const { paymentId } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ success: false, message: 'paymentId es requerido.' });
+    }
+
+    const mpEnv = (process.env.MP_ENV || 'test').toLowerCase();
+    const accessToken = mpEnv === 'prod'
+      ? (process.env.MERCADOPAGO_ACCESS_TOKEN_PROD || '')
+      : (process.env.MERCADOPAGO_ACCESS_TOKEN_TEST || '');
+
+    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!mpResponse.ok) {
+      logger.error(`[MP Verificar] No se pudo obtener pago ${paymentId}: HTTP ${mpResponse.status}`);
+      return res.status(404).json({ success: false, message: 'Pago no encontrado en MercadoPago.' });
+    }
+
+    const paymentData = await mpResponse.json();
+    const status = paymentData.status;
+    const preferenceId = paymentData.preference_id;
+    const externalRef = paymentData.external_reference;
+
+    const prisma = require('../config/prisma');
+    const pagoExistente = await prisma.pago.findFirst({
+      where: {
+        OR: [
+          ...(preferenceId ? [{ preferenceId }] : []),
+          ...(externalRef ? [{ externalRef }] : [])
+        ]
+      }
+    });
+
+    let suscripcionCreada = null;
+
+    if (pagoExistente) {
+      await prisma.pago.update({
+        where: { id: pagoExistente.id },
+        data: {
+          paymentId: String(paymentId),
+          estado: status,
+          metodo: paymentData.payment_method_id
+        }
+      });
+
+      if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
+        const sd = JSON.parse(pagoExistente.suscripcionData);
+
+        const proxima = new Date();
+        const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
+        proxima.setDate(proxima.getDate() + diasF);
+
+        try {
+          suscripcionCreada = await prisma.suscripcion.create({
+            data: {
+              clienteId: pagoExistente.clienteId,
+              mascotaId: pagoExistente.mascotaId,
+              plan: sd.plan,
+              proximaEntrega: proxima,
+              montoBase: pagoExistente.monto,
+              recetaNombre: sd.recetaNombre,
+              recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+              cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+              gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+              resumenBolsas: sd.resumenBolsas || null,
+              direccionEnvio: sd.direccionEnvio || null,
+              distritoEnvio: sd.distritoEnvio || null,
+              horarioEntrega: sd.horarioEntrega || null,
+              estadoPedido: 'pendiente',
+              estado: 'activa'
+            }
+          });
+
+          await prisma.pago.update({
+            where: { id: pagoExistente.id },
+            data: { procesado: true }
+          });
+
+          logger.info(`[MP Verificar] Suscripción creada para Pago MP: ${paymentId}`);
+        } catch (subErr) {
+          logger.error('[MP Verificar] Error al crear suscripción', subErr);
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      status,
+      monto: paymentData.transaction_amount,
+      metodo: paymentData.payment_method_id,
+      externalReference: externalRef,
+      suscripcionId: suscripcionCreada?.id || null,
+      procesado: pagoExistente?.procesado || !!suscripcionCreada
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   crearPreferenciaMercadoPago,
-  recibirWebhookMercadoPago
+  recibirWebhookMercadoPago,
+  verificarPagoMercadoPago
 };
 
