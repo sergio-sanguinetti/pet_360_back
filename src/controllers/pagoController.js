@@ -277,6 +277,7 @@ const verificarPagoMercadoPago = async (req, res, next) => {
     });
 
     let suscripcionCreada = null;
+    let creadoPor = null;
 
     if (pagoExistente) {
       await prisma.pago.update({
@@ -288,7 +289,23 @@ const verificarPagoMercadoPago = async (req, res, next) => {
         }
       });
 
-      if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
+      if (status === 'approved' && pagoExistente.procesado) {
+        // Webhook ya procesó este pago — buscar la suscripción existente
+        const suscExistente = await prisma.suscripcion.findFirst({
+          where: {
+            clienteId: pagoExistente.clienteId,
+            mascotaId: pagoExistente.mascotaId,
+            montoBase: pagoExistente.monto
+          },
+          orderBy: { id: 'desc' }
+        });
+        if (suscExistente) {
+          suscripcionCreada = suscExistente;
+          creadoPor = 'webhook';
+        }
+        logger.info(`[MP Verificar] Pago ${paymentId} ya procesado por webhook, suscripción: ${suscExistente?.id || 'no encontrada'}`);
+      } else if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
+        // Webhook no llegó — crear suscripción desde la verificación por URL
         const sd = JSON.parse(pagoExistente.suscripcionData);
 
         const proxima = new Date();
@@ -321,7 +338,8 @@ const verificarPagoMercadoPago = async (req, res, next) => {
             data: { procesado: true }
           });
 
-          logger.info(`[MP Verificar] Suscripción creada para Pago MP: ${paymentId}`);
+          creadoPor = 'verificacion_url';
+          logger.info(`[MP Verificar] Suscripción creada vía URL para Pago MP: ${paymentId}`);
         } catch (subErr) {
           logger.error('[MP Verificar] Error al crear suscripción', subErr);
         }
@@ -335,6 +353,7 @@ const verificarPagoMercadoPago = async (req, res, next) => {
       metodo: paymentData.payment_method_id,
       externalReference: externalRef,
       suscripcionId: suscripcionCreada?.id || null,
+      creadoPor,
       procesado: pagoExistente?.procesado || !!suscripcionCreada
     });
   } catch (err) {
