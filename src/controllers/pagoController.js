@@ -38,19 +38,9 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       });
     }
 
-    const successUrl = process.env.MP_SUCCESS_URL || 'http://localhost:3001/confirmacion-pago-exitoso';
-    const failureUrl = process.env.MP_FAILURE_URL || 'http://localhost:3001/pago-logistica?status=failure';
-    const pendingUrl = process.env.MP_PENDING_URL || 'http://localhost:3001/pago-logistica?status=pending';
-    const webhookUrl = process.env.MP_WEBHOOK_URL;
-
-    // Sanitizar title: máx 256 chars, sin caracteres especiales problemáticos
     const safeTitle = String(title).substring(0, 256).replace(/[<>"]/g, '');
     const safePrice = parseFloat(Number(unit_price).toFixed(2));
     const safeQty = Number.isFinite(quantity) && quantity > 0 ? Number(quantity) : 1;
-
-    // En modo test nunca enviamos notification_url ni auto_return
-    // (ambos pueden causar "policy UNAUTHORIZED" si MP no puede validarlos)
-    const isTest = mpEnv === 'test' || mpEnv === 'sandbox';
 
     const body = {
       items: [
@@ -61,18 +51,16 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           unit_price: safePrice
         }
       ],
-      ...(payerEmail ? { payer: { email: payerEmail } } : {}),
       external_reference: external_reference || `REF-${Date.now()}`,
       back_urls: {
-        success: successUrl,
-        failure: failureUrl,
-        pending: pendingUrl
+        success: process.env.MP_SUCCESS_URL || 'https://petlife360.pe/confirmacion-pago-exitoso',
+        failure: process.env.MP_FAILURE_URL || 'https://petlife360.pe/pago-logistica?status=failure',
+        pending: process.env.MP_PENDING_URL || 'https://petlife360.pe/pago-logistica?status=pending'
       },
-      binary_mode: true,
-      ...(webhookUrl ? { notification_url: webhookUrl } : {})
+      auto_return: 'approved'
     };
 
-    logger.info('[MP] Creando preferencia', { mpEnv, isTest, safePrice, safeTitle, body: JSON.stringify(body) });
+    logger.info('[MP] Creando preferencia', { mpEnv, safePrice, safeTitle });
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
@@ -120,10 +108,14 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       logger.error('[MP] Error al guardar registro de pago inicial', dbErr);
     }
 
+    const usesSandboxCheckout = accessToken.startsWith('TEST-');
+
     return res.json({
       success: true,
       preferenceId: data.id,
-      initPoint: data.init_point || data.initPoint || null,
+      initPoint: usesSandboxCheckout
+        ? (data.sandbox_init_point || data.init_point)
+        : (data.init_point || data.initPoint),
       sandboxInitPoint: data.sandbox_init_point || null,
       env: mpEnv
     });
