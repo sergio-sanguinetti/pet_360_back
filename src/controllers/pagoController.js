@@ -38,6 +38,13 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       });
     }
 
+    if (mascotaId == null || mascotaId === '' || !Number.isFinite(Number(mascotaId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere mascotaId válido antes de iniciar el pago. Vuelve atrás y completa el registro de tu mascota.'
+      });
+    }
+
     const safeTitle = String(title).substring(0, 256).replace(/[<>"]/g, '');
     const safePrice = parseFloat(Number(unit_price).toFixed(2));
     const safeQty = Number.isFinite(quantity) && quantity > 0 ? Number(quantity) : 1;
@@ -99,8 +106,8 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           externalRef: body.external_reference,
           monto: safePrice * safeQty,
           estado: 'pending',
-          clienteId: clienteId ? parseInt(clienteId) : null,
-          mascotaId: mascotaId ? parseInt(mascotaId) : null,
+          clienteId: clienteId ? parseInt(clienteId, 10) : null,
+          mascotaId: parseInt(mascotaId, 10),
           suscripcionData: suscripcionData ? JSON.stringify(suscripcionData) : null
         }
       });
@@ -182,42 +189,48 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
 
         // 4. Si el pago está aprobado y aún no ha sido procesado, crear suscripción
         if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
-          const sd = JSON.parse(pagoExistente.suscripcionData);
-          
-          const proxima = new Date();
-          const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
-          proxima.setDate(proxima.getDate() + diasF);
-
-          try {
-            await prisma.suscripcion.create({
-              data: {
-                clienteId: pagoExistente.clienteId,
-                mascotaId: pagoExistente.mascotaId,
-                plan: sd.plan,
-                proximaEntrega: proxima,
-                montoBase: pagoExistente.monto,
-                recetaNombre: sd.recetaNombre,
-                recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
-                cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
-                gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
-                resumenBolsas: sd.resumenBolsas || null,
-                direccionEnvio: sd.direccionEnvio || null,
-                distritoEnvio: sd.distritoEnvio || null,
-                horarioEntrega: sd.horarioEntrega || null,
-                estadoPedido: 'pendiente',
-                estado: 'activa'
-              }
+          if (pagoExistente.mascotaId == null) {
+            logger.error('[MP Webhook] Pago aprobado pero mascotaId es null; no se crea suscripción sin mascota.', {
+              pagoId: pagoExistente.id,
+              paymentId
             });
+          } else {
+            const sd = JSON.parse(pagoExistente.suscripcionData);
 
-            // Marcar como procesado para no duplicar
-            await prisma.pago.update({
-              where: { id: pagoExistente.id },
-              data: { procesado: true }
-            });
+            const proxima = new Date();
+            const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
+            proxima.setDate(proxima.getDate() + diasF);
 
-            logger.info(`Suscripción creada automáticamente vía Webhook para Pago ID: ${paymentId}`);
-          } catch (subErr) {
-            logger.error('Error al crear suscripción desde Webhook', subErr);
+            try {
+              await prisma.suscripcion.create({
+                data: {
+                  clienteId: pagoExistente.clienteId,
+                  mascotaId: pagoExistente.mascotaId,
+                  plan: sd.plan,
+                  proximaEntrega: proxima,
+                  montoBase: pagoExistente.monto,
+                  recetaNombre: sd.recetaNombre,
+                  recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+                  cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+                  gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+                  resumenBolsas: sd.resumenBolsas || null,
+                  direccionEnvio: sd.direccionEnvio || null,
+                  distritoEnvio: sd.distritoEnvio || null,
+                  horarioEntrega: sd.horarioEntrega || null,
+                  estadoPedido: 'pendiente',
+                  estado: 'activa'
+                }
+              });
+
+              await prisma.pago.update({
+                where: { id: pagoExistente.id },
+                data: { procesado: true }
+              });
+
+              logger.info(`Suscripción creada automáticamente vía Webhook para Pago ID: ${paymentId}`);
+            } catch (subErr) {
+              logger.error('Error al crear suscripción desde Webhook', subErr);
+            }
           }
         }
       } else {
@@ -312,37 +325,64 @@ const verificarPagoMercadoPago = async (req, res, next) => {
         const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
         proxima.setDate(proxima.getDate() + diasF);
 
-        try {
-          suscripcionCreada = await prisma.suscripcion.create({
-            data: {
-              clienteId: pagoExistente.clienteId,
-              mascotaId: pagoExistente.mascotaId,
-              plan: sd.plan,
-              proximaEntrega: proxima,
-              montoBase: pagoExistente.monto,
-              recetaNombre: sd.recetaNombre,
-              recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
-              cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
-              gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
-              resumenBolsas: sd.resumenBolsas || null,
-              direccionEnvio: sd.direccionEnvio || null,
-              distritoEnvio: sd.distritoEnvio || null,
-              horarioEntrega: sd.horarioEntrega || null,
-              estadoPedido: 'pendiente',
-              estado: 'activa'
-            }
+        if (pagoExistente.mascotaId == null) {
+          logger.error('[MP Verificar] Pago aprobado pero mascotaId es null; no se crea suscripción.', {
+            pagoId: pagoExistente.id,
+            paymentId
           });
+        } else {
+          try {
+            suscripcionCreada = await prisma.suscripcion.create({
+              data: {
+                clienteId: pagoExistente.clienteId,
+                mascotaId: pagoExistente.mascotaId,
+                plan: sd.plan,
+                proximaEntrega: proxima,
+                montoBase: pagoExistente.monto,
+                recetaNombre: sd.recetaNombre,
+                recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+                cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+                gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+                resumenBolsas: sd.resumenBolsas || null,
+                direccionEnvio: sd.direccionEnvio || null,
+                distritoEnvio: sd.distritoEnvio || null,
+                horarioEntrega: sd.horarioEntrega || null,
+                estadoPedido: 'pendiente',
+                estado: 'activa'
+              }
+            });
 
-          await prisma.pago.update({
-            where: { id: pagoExistente.id },
-            data: { procesado: true }
-          });
+            await prisma.pago.update({
+              where: { id: pagoExistente.id },
+              data: { procesado: true }
+            });
 
-          creadoPor = 'verificacion_url';
-          logger.info(`[MP Verificar] Suscripción creada vía URL para Pago MP: ${paymentId}`);
-        } catch (subErr) {
-          logger.error('[MP Verificar] Error al crear suscripción', subErr);
+            creadoPor = 'verificacion_url';
+            logger.info(`[MP Verificar] Suscripción creada vía URL para Pago MP: ${paymentId}`);
+          } catch (subErr) {
+            logger.error('[MP Verificar] Error al crear suscripción', subErr);
+          }
         }
+      }
+    }
+
+    let clienteResumen = null;
+    let clienteIdRespuesta = pagoExistente?.clienteId ?? null;
+    let mascotaIdRespuesta = pagoExistente?.mascotaId ?? null;
+
+    if (clienteIdRespuesta == null && externalRef && /^SUB-(\d+)-/.test(String(externalRef))) {
+      const m = String(externalRef).match(/^SUB-(\d+)-/);
+      if (m) clienteIdRespuesta = parseInt(m[1], 10);
+    }
+
+    if (clienteIdRespuesta != null) {
+      try {
+        clienteResumen = await prisma.cliente.findUnique({
+          where: { id: clienteIdRespuesta },
+          select: { id: true, nombre: true, email: true, wizardCompletado: true }
+        });
+      } catch (e) {
+        logger.warn('[MP Verificar] No se pudo cargar resumen de cliente', e);
       }
     }
 
@@ -354,7 +394,10 @@ const verificarPagoMercadoPago = async (req, res, next) => {
       externalReference: externalRef,
       suscripcionId: suscripcionCreada?.id || null,
       creadoPor,
-      procesado: pagoExistente?.procesado || !!suscripcionCreada
+      procesado: pagoExistente?.procesado || !!suscripcionCreada,
+      clienteId: clienteIdRespuesta,
+      mascotaId: mascotaIdRespuesta,
+      cliente: clienteResumen
     });
   } catch (err) {
     next(err);
