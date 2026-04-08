@@ -29,6 +29,87 @@ const createSuscripcion = async (req, res) => {
     }
 };
 
+/**
+ * Pedidos para panel admin: suscripciones + pagos MP aún no procesados (checkout iniciado o pago sin suscripción aún).
+ */
+const getPedidosOperaciones = async (req, res) => {
+    try {
+        const rol = req.user?.rol;
+        if (rol !== 'administrador' && rol !== 'vendedor') {
+            return res.status(403).json({ success: false, message: 'Sin permiso para esta operación' });
+        }
+
+        const [suscripciones, pagosPendientes] = await Promise.all([
+            prisma.suscripcion.findMany({
+                include: { cliente: true, mascota: true },
+                orderBy: { createdAt: 'desc' }
+            }),
+            prisma.pago.findMany({
+                where: {
+                    procesado: false,
+                    suscripcionData: { not: null }
+                },
+                orderBy: { createdAt: 'desc' }
+            })
+        ]);
+
+        const clienteIds = [...new Set(pagosPendientes.map((p) => p.clienteId).filter(Boolean))];
+        const mascotaIds = [...new Set(pagosPendientes.map((p) => p.mascotaId).filter(Boolean))];
+        const [clientes, mascotas] = await Promise.all([
+            clienteIds.length ? prisma.cliente.findMany({ where: { id: { in: clienteIds } } }) : [],
+            mascotaIds.length ? prisma.mascota.findMany({ where: { id: { in: mascotaIds } } }) : []
+        ]);
+        const clienteById = Object.fromEntries(clientes.map((c) => [c.id, c]));
+        const mascotaById = Object.fromEntries(mascotas.map((m) => [m.id, m]));
+
+        const mappedPagos = pagosPendientes.map((p) => {
+            let sd = {};
+            try {
+                sd = JSON.parse(p.suscripcionData);
+            } catch {
+                sd = {};
+            }
+            const c = p.clienteId ? clienteById[p.clienteId] : null;
+            const m = p.mascotaId ? mascotaById[p.mascotaId] : null;
+            return {
+                _source: 'pago',
+                pagoId: p.id,
+                pagoEstado: p.estado,
+                preferenceId: p.preferenceId,
+                clienteId: p.clienteId,
+                mascotaId: p.mascotaId,
+                plan: sd.plan || 'quincenal',
+                proximaEntrega: new Date(),
+                estado: p.estado === 'approved' ? 'post_pago' : 'esperando_pago',
+                montoBase: p.monto,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+                recetaNombre: sd.recetaNombre || null,
+                recetaId: sd.recetaId != null ? parseInt(sd.recetaId, 10) : null,
+                cantidadBolsas: sd.cantidadBolsas != null ? parseInt(sd.cantidadBolsas, 10) : 1,
+                gramosPorBolsa: sd.gramosPorBolsa != null ? parseInt(sd.gramosPorBolsa, 10) : 0,
+                resumenBolsas: sd.resumenBolsas || null,
+                estadoPedido: 'pendiente',
+                direccionEnvio: sd.direccionEnvio || null,
+                distritoEnvio: sd.distritoEnvio || null,
+                horarioEntrega: sd.horarioEntrega || null,
+                cliente: c,
+                mascota: m
+            };
+        });
+
+        const subsMarcados = suscripciones.map((s) => ({ ...s, _source: 'suscripcion' }));
+        const merged = [...mappedPagos, ...subsMarcados].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        res.json(merged);
+    } catch (error) {
+        console.error('Error getPedidosOperaciones:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 const getSuscripciones = async (req, res) => {
     try {
         const { mascotaId, clienteId } = req.query;
@@ -118,6 +199,7 @@ const deleteSuscripcion = async (req, res) => {
 
 module.exports = {
     createSuscripcion,
+    getPedidosOperaciones,
     getSuscripciones,
     getSuscripcionById,
     updateSuscripcion,
