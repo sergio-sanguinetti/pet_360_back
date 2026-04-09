@@ -47,7 +47,8 @@ const getPedidosOperaciones = async (req, res) => {
             prisma.pago.findMany({
                 where: {
                     procesado: false,
-                    suscripcionData: { not: null }
+                    suscripcionData: { not: null },
+                    estado: { not: 'pending' }
                 },
                 orderBy: { createdAt: 'desc' }
             })
