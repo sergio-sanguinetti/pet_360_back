@@ -48,7 +48,7 @@ const getPedidosOperaciones = async (req, res) => {
                 where: {
                     procesado: false,
                     suscripcionData: { not: null },
-                    estado: { not: 'pending' }
+                    estado: 'approved'
                 },
                 orderBy: { createdAt: 'desc' }
             })
