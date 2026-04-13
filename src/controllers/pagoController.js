@@ -99,7 +99,41 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
 
     // Guardar referencia en la tabla de pagos para el webhook
     const prisma = require('../config/prisma');
+    let nuevaSuscripcionData = suscripcionData;
+
     try {
+      if (suscripcionData && mascotaId != null) {
+        // CREAR LA SUSCRIPCIÓN EN ESTADO PENDIENTE ANTES DEL PAGO
+        const sd = suscripcionData;
+        const proxima = new Date();
+        const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
+        proxima.setDate(proxima.getDate() + diasF);
+
+        const nuevaSuscripcion = await prisma.suscripcion.create({
+          data: {
+            clienteId: clienteId ? parseInt(clienteId, 10) : null,
+            mascotaId: parseInt(mascotaId, 10),
+            plan: sd.plan,
+            proximaEntrega: proxima,
+            montoBase: safePrice * safeQty,
+            recetaNombre: sd.recetaNombre,
+            recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+            cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+            gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+            resumenBolsas: sd.resumenBolsas || null,
+            direccionEnvio: sd.direccionEnvio || null,
+            distritoEnvio: sd.distritoEnvio || null,
+            horarioEntrega: sd.horarioEntrega || null,
+            estadoPedido: 'pendiente_pago',
+            estado: 'pendiente' // A la espera del webhook
+          }
+        });
+
+        // Agregamos el id para que el webhook la actualice luego
+        nuevaSuscripcionData = { ...suscripcionData, suscripcionId: nuevaSuscripcion.id };
+        logger.info(`[MP] Suscripción (Pedido) temporal creada: ID ${nuevaSuscripcion.id}`);
+      }
+
       await prisma.pago.create({
         data: {
           preferenceId: data.id,
@@ -108,11 +142,11 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
           estado: 'pending',
           clienteId: clienteId ? parseInt(clienteId, 10) : null,
           mascotaId: parseInt(mascotaId, 10),
-          suscripcionData: suscripcionData ? JSON.stringify(suscripcionData) : null
+          suscripcionData: nuevaSuscripcionData ? JSON.stringify(nuevaSuscripcionData) : null
         }
       });
     } catch (dbErr) {
-      logger.error('[MP] Error al guardar registro de pago inicial', dbErr);
+      logger.error('[MP] Error al guardar registro de pago inicial o pre-crear suscripcion', dbErr);
     }
 
     const usesSandboxCheckout = accessToken.startsWith('TEST-');
@@ -187,49 +221,61 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
           }
         });
 
-        // 4. Si el pago está aprobado y aún no ha sido procesado, crear suscripción
+        // 4. Si el pago está aprobado y aún no ha sido procesado, actualizar o crear suscripción
         if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
           if (pagoExistente.mascotaId == null) {
-            logger.error('[MP Webhook] Pago aprobado pero mascotaId es null; no se crea suscripción sin mascota.', {
+            logger.error('[MP Webhook] Pago aprobado pero mascotaId es null; no se procesa suscripción.', {
               pagoId: pagoExistente.id,
               paymentId
             });
           } else {
             const sd = JSON.parse(pagoExistente.suscripcionData);
 
-            const proxima = new Date();
-            const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
-            proxima.setDate(proxima.getDate() + diasF);
-
             try {
-              await prisma.suscripcion.create({
-                data: {
-                  clienteId: pagoExistente.clienteId,
-                  mascotaId: pagoExistente.mascotaId,
-                  plan: sd.plan,
-                  proximaEntrega: proxima,
-                  montoBase: pagoExistente.monto,
-                  recetaNombre: sd.recetaNombre,
-                  recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
-                  cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
-                  gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
-                  resumenBolsas: sd.resumenBolsas || null,
-                  direccionEnvio: sd.direccionEnvio || null,
-                  distritoEnvio: sd.distritoEnvio || null,
-                  horarioEntrega: sd.horarioEntrega || null,
-                  estadoPedido: 'pendiente',
-                  estado: 'activa'
-                }
-              });
+              if (sd.suscripcionId) {
+                // Actualiza la suscripción preexistente
+                await prisma.suscripcion.update({
+                  where: { id: sd.suscripcionId },
+                  data: {
+                    estado: 'activa',
+                    estadoPedido: 'pendiente'
+                  }
+                });
+                logger.info(`Suscripción ${sd.suscripcionId} actualizada a 'activa' vía Webhook para Pago ID: ${paymentId}`);
+              } else {
+                // Lógica legacy por si no se creó con antelación
+                const proxima = new Date();
+                const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
+                proxima.setDate(proxima.getDate() + diasF);
+
+                await prisma.suscripcion.create({
+                  data: {
+                    clienteId: pagoExistente.clienteId,
+                    mascotaId: pagoExistente.mascotaId,
+                    plan: sd.plan,
+                    proximaEntrega: proxima,
+                    montoBase: pagoExistente.monto,
+                    recetaNombre: sd.recetaNombre,
+                    recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+                    cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+                    gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+                    resumenBolsas: sd.resumenBolsas || null,
+                    direccionEnvio: sd.direccionEnvio || null,
+                    distritoEnvio: sd.distritoEnvio || null,
+                    horarioEntrega: sd.horarioEntrega || null,
+                    estadoPedido: 'pendiente',
+                    estado: 'activa'
+                  }
+                });
+                logger.info(`Suscripción creada automáticamente vía Webhook para Pago ID: ${paymentId}`);
+              }
 
               await prisma.pago.update({
                 where: { id: pagoExistente.id },
                 data: { procesado: true }
               });
-
-              logger.info(`Suscripción creada automáticamente vía Webhook para Pago ID: ${paymentId}`);
             } catch (subErr) {
-              logger.error('Error al crear suscripción desde Webhook', subErr);
+              logger.error('Error al actualizar/crear suscripción desde Webhook', subErr);
             }
           }
         }
@@ -318,49 +364,62 @@ const verificarPagoMercadoPago = async (req, res, next) => {
         }
         logger.info(`[MP Verificar] Pago ${paymentId} ya procesado por webhook, suscripción: ${suscExistente?.id || 'no encontrada'}`);
       } else if (status === 'approved' && !pagoExistente.procesado && pagoExistente.suscripcionData) {
-        // Webhook no llegó — crear suscripción desde la verificación por URL
+        // Webhook no llegó — actualizar o crear suscripción desde la verificación por URL
         const sd = JSON.parse(pagoExistente.suscripcionData);
 
-        const proxima = new Date();
-        const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
-        proxima.setDate(proxima.getDate() + diasF);
-
         if (pagoExistente.mascotaId == null) {
-          logger.error('[MP Verificar] Pago aprobado pero mascotaId es null; no se crea suscripción.', {
+          logger.error('[MP Verificar] Pago aprobado pero mascotaId es null; no se procesa suscripción.', {
             pagoId: pagoExistente.id,
             paymentId
           });
         } else {
           try {
-            suscripcionCreada = await prisma.suscripcion.create({
-              data: {
-                clienteId: pagoExistente.clienteId,
-                mascotaId: pagoExistente.mascotaId,
-                plan: sd.plan,
-                proximaEntrega: proxima,
-                montoBase: pagoExistente.monto,
-                recetaNombre: sd.recetaNombre,
-                recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
-                cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
-                gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
-                resumenBolsas: sd.resumenBolsas || null,
-                direccionEnvio: sd.direccionEnvio || null,
-                distritoEnvio: sd.distritoEnvio || null,
-                horarioEntrega: sd.horarioEntrega || null,
-                estadoPedido: 'pendiente',
-                estado: 'activa'
-              }
-            });
+            if (sd.suscripcionId) {
+              suscripcionCreada = await prisma.suscripcion.update({
+                where: { id: sd.suscripcionId },
+                data: {
+                  estado: 'activa',
+                  estadoPedido: 'pendiente'
+                }
+              });
+              creadoPor = 'verificacion_url_update';
+              logger.info(`[MP Verificar] Suscripción ${sd.suscripcionId} actualizada a 'activa' vía URL para Pago MP: ${paymentId}`);
+            } else {
+              // Legacy
+              const proxima = new Date();
+              const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
+              proxima.setDate(proxima.getDate() + diasF);
+
+              suscripcionCreada = await prisma.suscripcion.create({
+                data: {
+                  clienteId: pagoExistente.clienteId,
+                  mascotaId: pagoExistente.mascotaId,
+                  plan: sd.plan,
+                  proximaEntrega: proxima,
+                  montoBase: pagoExistente.monto,
+                  recetaNombre: sd.recetaNombre,
+                  recetaId: sd.recetaId ? parseInt(sd.recetaId) : null,
+                  cantidadBolsas: sd.cantidadBolsas ? parseInt(sd.cantidadBolsas) : 1,
+                  gramosPorBolsa: sd.gramosPorBolsa ? parseInt(sd.gramosPorBolsa) : 0,
+                  resumenBolsas: sd.resumenBolsas || null,
+                  direccionEnvio: sd.direccionEnvio || null,
+                  distritoEnvio: sd.distritoEnvio || null,
+                  horarioEntrega: sd.horarioEntrega || null,
+                  estadoPedido: 'pendiente',
+                  estado: 'activa'
+                }
+              });
+              creadoPor = 'verificacion_url';
+              logger.info(`[MP Verificar] Suscripción creada vía URL para Pago MP: ${paymentId}`);
+            }
 
             await prisma.pago.update({
               where: { id: pagoExistente.id },
               data: { procesado: true }
             });
 
-            creadoPor = 'verificacion_url';
-            logger.info(`[MP Verificar] Suscripción creada vía URL para Pago MP: ${paymentId}`);
           } catch (subErr) {
-            logger.error('[MP Verificar] Error al crear suscripción', subErr);
+            logger.error('[MP Verificar] Error al actualizar/crear suscripción', subErr);
           }
         }
       }
