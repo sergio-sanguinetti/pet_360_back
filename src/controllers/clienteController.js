@@ -248,15 +248,15 @@ const completarWizard = async (req, res) => {
             let nuevaSuscripcion = null;
             if (suscripcionData) {
                 const planSeleccionado = suscripcionData.plan || 'mensual';
-                const proxima = new Date();
-                const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
-                proxima.setDate(proxima.getDate() + diasFrecuencia);
+                const fechaE = suscripcionData.fechaEntregaProgramada ? new Date(suscripcionData.fechaEntregaProgramada) : new Date();
+                const proxima = new Date(fechaE); const diasFrecuencia = planSeleccionado === "semanal" ? 7 : (planSeleccionado === "quincenal" ? 15 : 30); proxima.setDate(proxima.getDate() + diasFrecuencia);
 
                 nuevaSuscripcion = await tx.suscripcion.create({
                     data: {
                         clienteId: parseInt(clienteId),
                         mascotaId: nuevaMascota.id,
                         plan: planSeleccionado,
+                        fechaEntrega: fechaE,
                         proximaEntrega: proxima,
                         estado: 'activa',
                         montoBase: parseFloat(suscripcionData.montoBase || 0),
@@ -330,15 +330,15 @@ const agregarMascota = async (req, res) => {
             // 2. Crear Suscripción si se proporcionan datos
             if (suscripcionData) {
                 const planSeleccionado = suscripcionData.plan || 'mensual';
-                const proxima = new Date();
-                const diasFrecuencia = planSeleccionado === 'semanal' ? 7 : (planSeleccionado === 'quincenal' ? 15 : 30);
-                proxima.setDate(proxima.getDate() + diasFrecuencia);
+                const fechaE = suscripcionData.fechaEntregaProgramada ? new Date(suscripcionData.fechaEntregaProgramada) : new Date();
+                const proxima = new Date(fechaE); const diasFrecuencia = planSeleccionado === "semanal" ? 7 : (planSeleccionado === "quincenal" ? 15 : 30); proxima.setDate(proxima.getDate() + diasFrecuencia);
 
                 nuevaSuscripcion = await tx.suscripcion.create({
                     data: {
                         clienteId: parseInt(clienteId),
                         mascotaId: nuevaMascota.id,
                         plan: planSeleccionado,
+                        fechaEntrega: fechaE,
                         proximaEntrega: proxima,
                         estado: 'activa',
                         montoBase: parseFloat(suscripcionData.montoBase || 0),

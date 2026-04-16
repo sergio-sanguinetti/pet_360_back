@@ -105,7 +105,8 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
       if (suscripcionData && mascotaId != null) {
         // CREAR LA SUSCRIPCIÓN EN ESTADO PENDIENTE ANTES DEL PAGO
         const sd = suscripcionData;
-        const proxima = new Date();
+        let fechaE = sd.fechaEntregaProgramada ? new Date(sd.fechaEntregaProgramada) : new Date();
+        let proxima = new Date(fechaE);
         const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
         proxima.setDate(proxima.getDate() + diasF);
 
@@ -114,6 +115,7 @@ const crearPreferenciaMercadoPago = async (req, res, next) => {
             clienteId: clienteId ? parseInt(clienteId, 10) : null,
             mascotaId: parseInt(mascotaId, 10),
             plan: sd.plan,
+            fechaEntrega: fechaE,
             proximaEntrega: proxima,
             montoBase: safePrice * safeQty,
             recetaNombre: sd.recetaNombre,
@@ -244,7 +246,8 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
                 logger.info(`Suscripción ${sd.suscripcionId} actualizada a 'activa' vía Webhook para Pago ID: ${paymentId}`);
               } else {
                 // Lógica legacy por si no se creó con antelación
-                const proxima = new Date();
+                let fechaE = sd.fechaEntregaProgramada ? new Date(sd.fechaEntregaProgramada) : new Date();
+                let proxima = new Date(fechaE);
                 const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
                 proxima.setDate(proxima.getDate() + diasF);
 
@@ -253,6 +256,7 @@ const recibirWebhookMercadoPago = async (req, res, next) => {
                     clienteId: pagoExistente.clienteId,
                     mascotaId: pagoExistente.mascotaId,
                     plan: sd.plan,
+                    fechaEntrega: fechaE,
                     proximaEntrega: proxima,
                     montoBase: pagoExistente.monto,
                     recetaNombre: sd.recetaNombre,
@@ -386,7 +390,8 @@ const verificarPagoMercadoPago = async (req, res, next) => {
               logger.info(`[MP Verificar] Suscripción ${sd.suscripcionId} actualizada a 'activa' vía URL para Pago MP: ${paymentId}`);
             } else {
               // Legacy
-              const proxima = new Date();
+              let fechaE = sd.fechaEntregaProgramada ? new Date(sd.fechaEntregaProgramada) : new Date();
+              let proxima = new Date(fechaE);
               const diasF = sd.plan === 'semanal' ? 7 : sd.plan === 'mensual' ? 30 : 15;
               proxima.setDate(proxima.getDate() + diasF);
 
@@ -395,6 +400,7 @@ const verificarPagoMercadoPago = async (req, res, next) => {
                   clienteId: pagoExistente.clienteId,
                   mascotaId: pagoExistente.mascotaId,
                   plan: sd.plan,
+                  fechaEntrega: fechaE,
                   proximaEntrega: proxima,
                   montoBase: pagoExistente.monto,
                   recetaNombre: sd.recetaNombre,

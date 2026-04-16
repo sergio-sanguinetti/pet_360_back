@@ -257,6 +257,7 @@ model Suscripcion {
   mascotaId      Int?
   plan           String
   proximaEntrega DateTime
+  fechaEntrega   DateTime?
   estado         String   @default("activa")
   montoBase      Float    @default(0)
   createdAt      DateTime @default(now())
@@ -377,4 +378,14 @@ model Pago {
   updatedAt       DateTime @updatedAt
 
   @@map("pagos")
+}
+
+model FechaBloqueada {
+  id        Int      @id @default(autoincrement())
+  fecha     String   @unique
+  motivo    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fechas_bloqueadas")
 }

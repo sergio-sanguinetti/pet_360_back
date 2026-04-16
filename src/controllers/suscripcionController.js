@@ -80,7 +80,7 @@ const getPedidosOperaciones = async (req, res) => {
                 clienteId: p.clienteId,
                 mascotaId: p.mascotaId,
                 plan: sd.plan || 'quincenal',
-                proximaEntrega: new Date(),
+                proximaEntrega: sd.fechaEntregaProgramada ? new Date(sd.fechaEntregaProgramada) : (p.createdAt || new Date()),
                 estado: p.estado === 'approved' ? 'post_pago' : 'esperando_pago',
                 montoBase: p.monto,
                 createdAt: p.createdAt,
