@@ -9,7 +9,7 @@ const validacionesRegistro = [
   body('email')
     .isEmail()
     .withMessage('Debe ser un email válido')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false, gmail_remove_subaddress: false }),
   body('password')
     .isLength({ min: 6 })
     .withMessage('La contraseña debe tener al menos 6 caracteres'),
@@ -29,7 +29,7 @@ const validacionesLogin = [
   body('email')
     .isEmail()
     .withMessage('Debe ser un email válido')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false, gmail_remove_subaddress: false }),
   body('password')
     .notEmpty()
     .withMessage('La contraseña es requerida')
@@ -39,7 +39,7 @@ const validacionesForgotPassword = [
   body('email')
     .isEmail()
     .withMessage('Debe ser un email válido')
-    .normalizeEmail()
+    .normalizeEmail({ gmail_remove_dots: false, gmail_remove_subaddress: false }),
 ];
 
 const validacionesResetPassword = [
